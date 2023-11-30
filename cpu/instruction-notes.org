@@ -1,0 +1,86 @@
+#+TITLE: CPU Instruction notes
+
+* Resourceed
+[[https://gbdev.io/pandocs/CPU_Instruction_Set.html]] helpful for like everything lmao
+[[https://gekkio.fi/files/gb-docs/gbctr.pdf]] CPU technical reference
+
+
+* Things I gotta put in here
++ Flags
++ the stupid PC and why PC+1 exists
++ The like prefix instructions
+
+* TODO Functions to implement [0/5]
++ [ ] ADD function
++ [ ] SUB function
++ [ ] LD function
++ [ ] INC function
++ [ ] DEC function
++ [ ] 
+# add more
+
+* General Notes
++ The A Register is also known as the "accumulator" register and so
+  like all(?) the kinda mathy instructions will be performed on the A
+  register.
++ Some of the Registers let you combine them into one 16-bit
+  register. here's a fancy table showing this that I stole
+
+| 16-bit | Hi | Lo | Name/Function           |
+|--------+----+----+-------------------------|
+| AF     | A  | -  | Accumulator & Flags     |
+| BC     | B  | C  | BC                      |
+| DE     | D  | E  | DE                      |
+| HL     | H  | L  | HL                      |
+| SP     | -  | -  | Stack Pointer           |
+| PC     | -  | -  | Program Counter/Pointer |
+
++ As you can see stuff like the B and C can be combined into a 16-bit register called BC
++ You can sometimes(?) perform operations on these combined registers
+
+* Shorthand Meanings
+** ADD
++ Adds two operands together
++ Puts the result in the first operand
+  + So ~ADD A, B~ will do A+B and store the result in A
+
+** SUB
++ Subtracts a register from the ~A~ register and stores the result in the ~A~ register
++ So for example ~SUB A, B~ will act like ~A = A-B~ (NOTE: due to the
+  setup of the sillyness the A argument can be excluded due to the
+  fact that the SUB gets performed on the A register
+
+** LD
++ Loads the value of the second argument into the first
++ So ~LD r, n~ puts the value of n into r (~r = n~)
++ Okay so turns out there's like multiple different types of LD functions so imma type 'em here rq
+  + ~LD reg1, reg2~ loads the data from register reg1 to register reg2 
+  + ~LD reg, nX~ loads the data from the nX data into specified register
+    + nX can be in form of n8 for one 8-bit register or n16 for a combination 16-bit register
+  + add more later
+
+** INC
++ Increments the data stored in the specified register
+
+
+* Flags
++ The flags register is represented by the lower 8 bits of the ~AF~
+  combination register.
++ It contains information about the most recent instruction
+  + so basically like, make sure to set the flags in the instruction
+    execution function.
++ These are the Flags
+| Bit | Name | Explanation            |
+|-----+------+------------------------|
+|   7 | z    | Zero flag              |
+|   6 | n    | Subtraction flag (BCD) |
+|   5 | h    | Half Carry flag (BCD)  |
+|   4 | c    | Carry flag             |
+
++ Zero Flag
+  + Bit is set if the result of an operation is 0. Apparently used by
+    conditional jumps(?)
++ Carry Flag:
+  + Is set in these cases:
+    + When result of 8-bit addition is higher than $FF??
+

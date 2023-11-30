@@ -1,4 +1,4 @@
-package main
+package cpu
 
 
 // Constants for the register flags positions
@@ -49,14 +49,14 @@ func boolToBit(b bool) uint8 {
 
 // Registers the memory Registers for the CPU
 type Registers struct {
-	a uint8
-	b uint8
-	c uint8
-	d uint8
-	e uint8
-	f uint8
-	h uint8
-	l uint8
+	A uint8
+	B uint8
+	C uint8
+	D uint8
+	E uint8
+	F FlagsRegister
+	H uint8
+	L uint8
 }
 
 // Combined register methods
@@ -64,11 +64,11 @@ type Registers struct {
 
 // GetBC get the combination register of b and c
 func (r *Registers) GetBC() uint16 {
-	return (uint16(r.b) << 8) | uint16(r.c)
+	return (uint16(r.B) << 8) | uint16(r.C)
 }
 
 // SetBC set the value stored in the b and c combination register
 func (r *Registers) SetBC(value uint16)  {
-	r.b = uint8((value & 0xFF00) >> 8)
-	r.c = uint8(value & 0xFF)
+	r.B = uint8((value & 0xFF00) >> 8)
+	r.C = uint8(value & 0xFF)
 }

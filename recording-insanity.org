@@ -1,0 +1,16 @@
+#+TITLE: silly little project diary
+
+* Intro
+This is kinda gonna be like a little day by day record of what shit
+I've done here and etc. probs gonna be pretty unhinged but idc
+
+* <2023-11-30 Thu>
+Today I started the project. Began to slowly understand how the system
+works. not much done on the programming end except for slowly
+implementing some of the cpu instruction functions.
+
+Found a couple helpful resources to help me along and a couple
+existing projects to help me. Things are looking.... hopeful
+
+TLDR: So like basically so far I've started researching the
+architecture and stuff and begun implementing the CPU starting with the instructions
