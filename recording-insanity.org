@@ -14,3 +14,7 @@ existing projects to help me. Things are looking.... hopeful
 
 TLDR: So like basically so far I've started researching the
 architecture and stuff and begun implementing the CPU starting with the instructions
+
+* <2023-12-01 Fri> Day Two
+Alright, new day, new me. Todays plan is getting the CPU instruction
+functions properly implemented and stuff. 

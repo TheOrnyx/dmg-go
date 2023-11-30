@@ -1,0 +1,44 @@
+#+TITLE: Gameboy-Golor
+
+* Gameboy-Golor
+Hi and welcome to the repo for my (hopefully completed) Gameboy-color
+emulator written in go. This is less of an actual emulator and more of
+a first attempt at systems programming type stuff. So I apologize if
+it doens't function right or is innaccurate cuz I'm a bit
+inexperienced lmao.
+
+However if you do want to use it as an emulator then (by the time I
+release this) there should be nothing stopping you and I hope you
+enjoy it. Otherwise I hope this can serve as a good learning resource
+or smth for other people hoping to attempt the same thing.
+
+
+* Resources and credits
+I used a lot of resources and I also +plagiarized+ +borrowed+
+referenced some already existing gameboy/color emulators for
+inspiration and to get an idea of how they did their stuff.
+
+[[https://github.com/djhworld/gomeboycolor]] - this is another
+gameboy-color emulator written in go that I used as a reference point
+for a couple of parts of mine. It's a very well made project and I thank the creator 🙏
+
+[[https://gekkio.fi/files/gb-docs/gbctr.pdf]] - The gameboy technical
+reference. This one helped a lot with the creation of the CPU
+instruction functions as it helped me clearly see how some of the functions operated
+
+[[https://gbdev.io/gb-opcodes//optables/]] - This is one of quite a few
+tables that show all of the CPU instruction functions along with their
+OPCode and other stuff, this helped quite a lot with understanding the
+CPU instructions more as well as provided me with the json file to
+easily format and then use these instructions in my program
+
+[[https://rylev.github.io/DMG-01/public/book/introduction.html]] - I
+didn't end up following this one exactly but it was helpful as a
+baseline to help me understand the basics of emulating the system and
+served as a great entry point. Also really well written (even tho it uses rust 🤢)
+
+[[https://gbdev.io/pandocs]] - The absolute beast, like 90% of the
+information I gained came from this, many places tell you to use this
+and I can see why. It's amazingly written and while it can be a little bit confusing it's amazing reference material
+
+
