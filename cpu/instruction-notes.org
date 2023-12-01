@@ -84,3 +84,7 @@
   + Is set in these cases:
     + When result of 8-bit addition is higher than $FF??
 
+
+* Conjoined register
+I can't believe I didn't think of this before skull emoji.
+When they say "get the item stored in the address in HL" or smth, you have to get it from the memory skull

@@ -17,4 +17,10 @@ architecture and stuff and begun implementing the CPU starting with the instruct
 
 * <2023-12-01 Fri> Day Two
 Alright, new day, new me. Todays plan is getting the CPU instruction
-functions properly implemented and stuff. 
+functions properly implemented and stuff.
+
+Today I started working on the cartridge and MMU stuff while also
+continuing to implement the CPU. It's kinda sad how much of my code is
+kinda plagiarzed but I'm definitely understanding some stuff. Like
+that the stupid instructions read from memory. Idk why I didn't make
+that connection before but hooray.

@@ -1,4 +1,4 @@
-module gameboy-golor
+module github.com/TheOrnyx/gameboy-golor
 
 go 1.21.4
 
