@@ -25,6 +25,7 @@ type CPU struct {
 	SP uint16 // Stack pointer
 	CurrentInstruction *CurrentInstruction //the current instruction to be run
 	MMU mmu.MMU
+	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
 }
 
 // Reset reset the cpu
@@ -78,7 +79,8 @@ func (cpu *CPU) SetFlag(flag int, state bool)  {
 // Step the step function for the cpu
 func (cpu *CPU) Step() int {
 	opCode := cpu.ReadByte(cpu.PC)
-
+	cpu.PC++
+	
 	if opCode == 0xCB { // use the prefixed instructions 
 		
 	} else {
@@ -99,13 +101,32 @@ func (cpu *CPU) IncrementPC(amnt int)  {
 	cpu.PC += uint16(amnt)
 }
 
+// Add16 add 2 16bit numbers together, set flags and return the result
+func (cpu *CPU) Add16(a, b uint16) uint16 {
+	result := a + b
+
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(C)
+	cpu.ResetFlag(H)
+	
+	if result < a {
+		cpu.SetFlag(C, true)
+	}
+
+	if result & (1 << 11) != 0 {
+		cpu.SetFlag(H, true)
+	}
+
+	return result
+}
+
 
 // CompileInstruction compile the given instruction, properly reading
 // and attaching the correct number of operands
 // pretty much stolen tbh
 func (cpu *CPU) CompileInstruction(instruction *Instruction)  {
 	cpu.CurrentInstruction.Instruction = instruction
-	switch instruction.Size {
+	switch instruction.OperandAmnt {
 	case 1:
 		cpu.CurrentInstruction.Operands[0] = cpu.ReadByte(cpu.PC + 1)
 	case 2:
@@ -127,12 +148,6 @@ func byteToInstruction(b uint8) (int, error) {
 	return 0, nil
 }
 
-// ReadByteFrom16bReg read the data stored at the 16-bit register reg1,reg2 and return it
-func ReadByteFrom16bReg(reg1, reg2 *byte) byte {
-	//TODO implement this
-	return 0
-}
-
 // incByte increment given byte and set appropriate flags based on the outcome
 // also return the outcome
 // used in instruction functions
@@ -149,6 +164,7 @@ func (cpu *CPU) incByte(val byte) byte {
 	if result == 0 {
 		cpu.SetFlag(Z, true)
 	}
+	// TODO - check if the half carry thing can be changed
 	if halfCarryAdd8b(origByte, 1) { // maybe don't do calculation twice idk (optimization)
 		cpu.SetFlag(H, true)
 	}
@@ -175,9 +191,8 @@ func (cpu *CPU) decByte(val byte) byte {
 	return result
 }
 
-// IncHLReg increment the value stored in the HL joined Register
-func (cpu *CPU) IncHLReg()  {
-	address := JoinBytes(cpu.Reg.H, cpu.Reg.L)
-	// TODO - when doing the memory you gotta like grab the item stored in that adress fuck
+// WriteByteToAddr write data to address located at addr
+func (cpu *CPU) WriteByteToAddr(addr uint16, data byte)  {
+	// TODO add bit for writing to the MMU here
 }
 

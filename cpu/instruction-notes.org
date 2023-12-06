@@ -88,3 +88,7 @@
 * Conjoined register
 I can't believe I didn't think of this before skull emoji.
 When they say "get the item stored in the address in HL" or smth, you have to get it from the memory skull
+
+Okay so god dammit, Apparently if you have an instruction that
+references ~HL~ it means just the address value, however if you have
+~(HL)~ or ~[HL]~ it means the value stored in the address. I hate this place

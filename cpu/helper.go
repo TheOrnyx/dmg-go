@@ -1,5 +1,7 @@
 package cpu
 
+// TODO - maybe move this to it's own package like utils or smth
+
 type unsigned interface {
 	uint | uint8 | uint16 | uint32 | uint64 | uintptr
 }
@@ -28,5 +30,15 @@ func halfCarrySub8b(a, b byte) bool {
 // JoinBytes join 2 bytes together
 // TODO - check that this actually works properly
 func JoinBytes(high, low byte) uint16 {
-	return (uint16(high) << 8) ^ uint16(low)
+	return (uint16(high) << 8) | uint16(low)
+	// TODO - check
+}
+
+
+// Split16 split a 16 bit value into two byte values and return them
+func Split16(val uint16) (high, low uint8) {
+	low = byte(val & 0xFF)
+	high = byte(val >> 8)
+
+	return high, low
 }

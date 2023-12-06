@@ -23,15 +23,6 @@ type FlagsRegister struct {
 	carry      bool
 }
 
-// setZeroIf set the zero flag to true if val = 0
-func (f *FlagsRegister) setZeroIf(val byte)  {
-	if val == 0 {
-		f.zero = true
-	} else {
-		f.zero = false
-	}
-}
-
 // toByte convert the FlagsRegister f to a uint8 byte value
 func (f *FlagsRegister) toByte() uint8 {
 	return uint8(
@@ -73,6 +64,17 @@ type Registers struct {
 	L uint8
 }
 
+// HL return the address of the HL register pair
+func (r *Registers) HL() uint16 {
+	return JoinBytes(r.H, r.L)
+}
+
+// HLByte returns the HL register pair as two byte pointers
+// TODO - maybe switch my instruction calls to use this instead of individual stuff but idk
+func (r *Registers) HLByte() (*byte, *byte) {
+	return &r.H, &r.L
+}
+
 // reset reset the Registers to their default state
 func (r *Registers) reset()  {
 	r.A = 0
@@ -82,6 +84,8 @@ func (r *Registers) reset()  {
 	r.E = 0
 	r.H = 0
 	r.A = 0
+
+	// TODO maybe move the flag to be here
 }
 
 // Combined register methods
