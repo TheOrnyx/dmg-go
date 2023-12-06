@@ -24,3 +24,14 @@ continuing to implement the CPU. It's kinda sad how much of my code is
 kinda plagiarzed but I'm definitely understanding some stuff. Like
 that the stupid instructions read from memory. Idk why I didn't make
 that connection before but hooray.
+
+* <2023-12-06 Wed>Day Three
+After a small hiatus due to my stupid job I was back at it again.
+
+After a long day of work about more than halfish of the unprefixed CPU
+instructions have been written and a lot more understanding has been
+gained. project is looking up and hopefully most of the CPU (excluding
+the prefixed instructions lmao) should be completed by the next day I
+work on this.
+
+Also finally started understanding some of the stupid stuff like (HL) vs HL etc
