@@ -143,12 +143,17 @@ func (cpu *CPU) DecHLRegData()  {
 	cpu.Dec16BitRegData(high, low, true)
 }
 
+// DecSPReg decrement the stack pointer register
+func (cpu *CPU) DecSPReg()  {
+	cpu.SP -= 1
+	// TODO - check I don't need to do anything else here
+}
+
 //// LD (load) FUNCTIONS /////
 
 // Load8bRegTo8bReg load data from one 8-bit register r1 into another 8-bit register r2
 // LD r, r’: Load register (register)
-func (cpu *CPU) Load8bRegInto8bReg() {
-	var r1, r2 *byte
+func (cpu *CPU) Load8BitRegInto8BitReg(r1, r2 *byte) {
 	*r1 = *r2
 }
 
@@ -159,10 +164,22 @@ func (cpu *CPU) Load8BitDataInto8BitReg(r *byte) {
 }
 
 
-// Load8bRegInto16bRegAddr load the data from 8-bit register r into the adress specified in 16-bit register r1,r2
-func (cpu *CPU) Load8bRegInto16bRegAddr(r1, r2, r *byte) {
+// Load8BitRegInto16BitRegAddr load the data from 8-bit register r into the adress specified in 16-bit register r1,r2
+func (cpu *CPU) Load8BitRegInto16BitRegAddr(r1, r2, r *byte) {
 	regPair := JoinBytes(*r1, *r2)
 	cpu.WriteByteToAddr(regPair, *r)
+}
+
+// LoadHLDataInto8BitReg load the data located in the HL register into the register R
+func (cpu *CPU) LoadHLDataInto8BitReg(r *byte)  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+	*r = data
+}
+
+// Load8BitRegIntoHLAddr load the data in register r into address pointed to by HL
+func (cpu *CPU) Load8BitRegIntoHLAddr(r *byte)  {
+	cpu.WriteByteToAddr(cpu.Reg.HL(), *r)
+	// TODO - chec this is right
 }
 
 // Load8BitDataInto16BitRegAddr load the immediate data into adress specified by r1,r2
@@ -356,6 +373,11 @@ func (cpu *CPU) Stop() {
 	// TODO - figure out how to like actually implement this
 }
 
+// Halt stop system clock and enter halt mode
+func (cpu *CPU) Halt()  {
+	// TODO - implement this
+}
+
 // ComplementRegA take the complement of Reg A (flip the bits)
 func (cpu *CPU) ComplementRegA()  {
 	cpu.Reg.A = ^cpu.Reg.A
@@ -368,6 +390,13 @@ func (cpu *CPU) SetCarryFlag()  {
 	cpu.SetFlag(C, true)
 }
 
+// ComplementCarryFlag make the carry flag be it's complement and resets the N and H flag
+func (cpu *CPU) ComplementCarryFlag()  {
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+	cpu.Reg.F.carry = !cpu.Reg.F.carry
+}
+
 //// INSTRUCTIONS /////
 
 // InstructionsUnprefixed - the slice to represent each of the
@@ -377,7 +406,7 @@ func (cpu *CPU) SetCarryFlag()  {
 var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x00, "NOP", 0, 1, func(cpu *CPU) { cpu.Nop() }},
 	&Instruction{0x01, "LD BC, d16", 2, 3, func(cpu *CPU) { cpu.Load16BitDataInto16BitRegPair(&cpu.Reg.B, &cpu.Reg.C) }},
-	&Instruction{0x02, "LD (BC), A", 0, 2, func(cpu *CPU) { cpu.Load8bRegInto16bRegAddr(&cpu.Reg.B, &cpu.Reg.C, &cpu.Reg.A) }},
+	&Instruction{0x02, "LD (BC), A", 0, 2, func(cpu *CPU) { cpu.Load8BitRegInto16BitRegAddr(&cpu.Reg.B, &cpu.Reg.C, &cpu.Reg.A) }},
 	&Instruction{0x03, "INC BC", 0, 2, func(cpu *CPU) { cpu.Inc16BitRegPair(&cpu.Reg.B, &cpu.Reg.C) }},
 	&Instruction{0x04, "INC B", 0, 1, func(cpu *CPU) { cpu.Inc8BitReg(&cpu.Reg.B) }},
 	&Instruction{0x05, "DEC B", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.B) }},
@@ -393,7 +422,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x0F, "RRCA", 0, 1, func(cpu *CPU) { cpu.RotateRightCarryRegA() }},
 	&Instruction{0x10, "STOP", 1, 1, func(cpu *CPU) { cpu.Stop() }},
 	&Instruction{0x11, "LD DE, d16", 2, 3, func(cpu *CPU) { cpu.Load16BitDataInto16BitRegPair(&cpu.Reg.D, &cpu.Reg.E) }},
-	&Instruction{0x12, "LD (DE), A", 0, 2, func(cpu *CPU) { cpu.Load8bRegInto16bRegAddr(&cpu.Reg.D, &cpu.Reg.E, &cpu.Reg.A) }},
+	&Instruction{0x12, "LD (DE), A", 0, 2, func(cpu *CPU) { cpu.Load8BitRegInto16BitRegAddr(&cpu.Reg.D, &cpu.Reg.E, &cpu.Reg.A) }},
 	&Instruction{0x13, "INC DE", 0, 2, func(cpu *CPU) { cpu.Inc16BitRegPair(&cpu.Reg.D, &cpu.Reg.E) }},
 	&Instruction{0x14, "INC D", 0, 1, func(cpu *CPU) { cpu.Inc8BitReg(&cpu.Reg.D) }},
 	&Instruction{0x15, "DEC D", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.D) }},
@@ -433,76 +462,85 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x37, "SCF", 0, 1, func(cpu *CPU) {cpu.SetCarryFlag()}},
 	&Instruction{0x38, "JR C, s8", 1, 2, func(cpu *CPU) {cpu.JumpConditionalRelative8bit(&cpu.Reg.F.carry, true)}},
 	&Instruction{0x39, "ADD HL, SP", 0, 2, func(cpu *CPU) {cpu.AddSPToHLReg()}},
-	&Instruction{0x3A, "LD A, (HL-)", 0, 2, func(cpu *CPU) {}},
-	&Instruction{0x3B, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x3C, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x3D, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x3E, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x3F, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x40, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x41, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x42, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x43, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x44, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x45, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x46, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x47, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x48, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x49, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4A, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4B, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4C, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4D, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4E, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x4F, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x50, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x51, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x52, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x53, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x54, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x55, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x56, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x57, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x58, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x59, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5A, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5B, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5C, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5D, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5E, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x5F, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x60, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x61, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x62, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x63, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x64, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x65, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x66, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x67, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x68, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x69, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6A, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6B, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6C, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6D, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6E, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x6F, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x70, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x71, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x72, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x73, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x74, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x75, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x76, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x77, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x78, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x79, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7A, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7B, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7C, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7D, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7E, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0x7F, "", 0, 0, func(cpu *CPU) {}},
+	&Instruction{0x3A, "LD A, (HL-)", 0, 2, func(cpu *CPU) {cpu.Load8bRegInto16bRegAddrDec(&cpu.Reg.H, &cpu.Reg.L, &cpu.Reg.A)}},
+	&Instruction{0x3B, "DEC SP", 0, 2, func(cpu *CPU) {cpu.DecSPReg()}},
+	&Instruction{0x3C, "INC A", 0, 1, func(cpu *CPU) {cpu.Inc8BitReg(&cpu.Reg.A)}},
+	&Instruction{0x3D, "DEC A", 0, 1, func(cpu *CPU) {cpu.Dec8BitReg(&cpu.Reg.A)}},
+	&Instruction{0x3E, "LD A, d8", 1, 2, func(cpu *CPU) {cpu.Load8BitDataInto8BitReg(&cpu.Reg.A)}},
+	&Instruction{0x3F, "CCF", 0, 1, func(cpu *CPU) {cpu.ComplementCarryFlag()}},
+	
+	&Instruction{0x40, "LD B, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.B)}},
+	&Instruction{0x41, "LD B, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.C)}},
+	&Instruction{0x42, "LD B, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.D)}},
+	&Instruction{0x43, "LD B, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.E)}},
+	&Instruction{0x44, "LD B, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.H)}},
+	&Instruction{0x45, "LD B, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.L)}},
+	&Instruction{0x46, "LD B, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.B)}},
+	&Instruction{0x47, "LD B, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.B, &cpu.Reg.A)}},
+	
+	&Instruction{0x48, "LD C, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.B)}},
+	&Instruction{0x49, "LD C, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.C)}},
+	&Instruction{0x4A, "LD C, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.D)}},
+	&Instruction{0x4B, "LD C, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.E)}},
+	&Instruction{0x4C, "LD C, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.H)}},
+	&Instruction{0x4D, "LD C, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.L)}},
+	&Instruction{0x4E, "LD C, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.C)}},          
+	&Instruction{0x4F, "LD C, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.C, &cpu.Reg.A)}},
+	
+	&Instruction{0x50, "LD D, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.B)}},
+	&Instruction{0x51, "LD D, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.C)}},
+	&Instruction{0x52, "LD D, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.D)}},
+	&Instruction{0x53, "LD D, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.E)}},
+	&Instruction{0x54, "LD D, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.H)}},
+	&Instruction{0x55, "LD D, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.L)}},
+	&Instruction{0x56, "LD D, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.D)}},          
+	&Instruction{0x57, "LD D, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.D, &cpu.Reg.A)}},
+	
+	&Instruction{0x58, "LD E, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.B)}},
+	&Instruction{0x59, "LD E, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.C)}},
+	&Instruction{0x5A, "LD E, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.D)}},
+	&Instruction{0x5B, "LD E, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.E)}},
+	&Instruction{0x5C, "LD E, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.H)}},
+	&Instruction{0x5D, "LD E, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.L)}},
+	&Instruction{0x5E, "LD E, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.E)}},          
+	&Instruction{0x5F, "LD E, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.E, &cpu.Reg.A)}},
+	
+	&Instruction{0x60, "LD H, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.B)}},
+	&Instruction{0x61, "LD H, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.C)}},
+	&Instruction{0x62, "LD H, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.D)}},
+	&Instruction{0x63, "LD H, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.E)}},
+	&Instruction{0x64, "LD H, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.H)}},
+	&Instruction{0x65, "LD H, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.L)}},
+	&Instruction{0x66, "LD H, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.H)}},          
+	&Instruction{0x67, "LD H, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.H, &cpu.Reg.A)}},
+	
+	&Instruction{0x68, "LD L, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.B)}},
+	&Instruction{0x69, "LD L, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.C)}},
+	&Instruction{0x6A, "LD L, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.D)}},
+	&Instruction{0x6B, "LD L, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.E)}},
+	&Instruction{0x6C, "LD L, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.H)}},
+	&Instruction{0x6D, "LD L, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.L)}},
+	&Instruction{0x6E, "LD L, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.L)}},          
+	&Instruction{0x6F, "LD L, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.L, &cpu.Reg.A)}},
+	
+	&Instruction{0x70, "LD (HL), B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.B)}},
+	&Instruction{0x71, "LD (HL), C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.C)}},
+	&Instruction{0x72, "LD (HL), D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.D)}},
+	&Instruction{0x73, "LD (HL), E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.E)}},
+	&Instruction{0x74, "LD (HL), H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.H)}},
+	&Instruction{0x75, "LD (HL), L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr( &cpu.Reg.L)}},
+	&Instruction{0x76, "HALT", 0, 1, func(cpu *CPU) {cpu.Halt()}},
+	&Instruction{0x77, "LD (HL), A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegIntoHLAddr(&cpu.Reg.A)}},
+	
+	&Instruction{0x78, "LD A, B", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.B)}},
+	&Instruction{0x79, "LD A, C", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.C)}},
+	&Instruction{0x7A, "LD A, D", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.D)}},
+	&Instruction{0x7B, "LD A, E", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.E)}},
+	&Instruction{0x7C, "LD A, H", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.H)}},
+	&Instruction{0x7D, "LD A, L", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.L)}},
+	&Instruction{0x7E, "LD A, (HL)", 0, 1, func(cpu *CPU) {cpu.LoadHLDataInto8BitReg(&cpu.Reg.A)}},
+	&Instruction{0x7F, "LD A, A", 0, 1, func(cpu *CPU) {cpu.Load8BitRegInto8BitReg(&cpu.Reg.A, &cpu.Reg.A)}},
+	
 	&Instruction{0x80, "", 0, 0, func(cpu *CPU) {}},
 	&Instruction{0x81, "", 0, 0, func(cpu *CPU) {}},
 	&Instruction{0x82, "", 0, 0, func(cpu *CPU) {}},
