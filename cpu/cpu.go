@@ -137,9 +137,36 @@ func (cpu *CPU) CompileInstruction(instruction *Instruction)  {
 
 // ReadByte reads the byte at address addr and returns it
 func (cpu *CPU) ReadByte(addr uint16) byte {
-	// NOTE - this should read a byte from the MMU but I'm too lazy to implement that atm
+	// TODO  - this should read a byte from the MMU but I'm too lazy to implement that atm
 	return 0
 }
+
+/////////////////////////////
+// Stack Pointer Functions //
+/////////////////////////////
+
+// pushSP push data onto the stack pointer
+func (cpu *CPU) pushSP(data uint16)  {
+	msb, lsb := Split16(data) // split to the MSB and LSB
+	
+	cpu.SP -= 1
+	cpu.WriteByteToAddr(cpu.SP, lsb)
+
+	cpu.SP -= 1
+	cpu.WriteByteToAddr(cpu.SP, msb)
+}
+
+// popSP pop the top off the stack pointer and return the address
+func (cpu *CPU) popSP() uint16 {
+	lsb := cpu.ReadByte(cpu.SP)
+	cpu.SP += 1
+
+	msb := cpu.ReadByte(cpu.SP)
+	cpu.SP += 1
+
+	return JoinBytes(msb, lsb)
+}
+
 
 // byteToInstruction convert a byte value to an instruction
 // if converted value does not map to an instruction then return an error

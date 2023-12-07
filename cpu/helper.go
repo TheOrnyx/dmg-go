@@ -19,7 +19,9 @@ func overflowAdd[T unsigned](a, b T) (T, bool)  {
 
 // halfCarryAdd8b checks and returns if the addition result of a and b results in a half carry
 func halfCarryAdd8b(a, b byte) bool {
-	return (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+	return (a & 0x0F) + (b & 0x0F) > 0x0F
+	// return (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+	// TODO - test this
 }
 
 // halfCarrySub8b checks and returns if the subtraction result of a and b results in a half carry
@@ -36,9 +38,19 @@ func JoinBytes(high, low byte) uint16 {
 
 
 // Split16 split a 16 bit value into two byte values and return them
+// TODO - check this is right, should be tho
 func Split16(val uint16) (high, low uint8) {
 	low = byte(val & 0xFF)
 	high = byte(val >> 8)
 
 	return high, low
+}
+
+// boolToBit convert a bool to a bit value (1 for true, 0 for false)
+func boolToBit(b bool) uint8 {
+	if b {
+		return 1
+	}
+
+	return 0
 }

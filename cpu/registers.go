@@ -43,14 +43,7 @@ func byteToFlagsRegister(b uint8) FlagsRegister {
 	}
 }
 
-// boolToBit convert a bool to a bit value (1 for true, 0 for false)
-func boolToBit(b bool) uint8 {
-	if b {
-		return 1
-	}
 
-	return 0
-}
 
 // Registers the memory Registers for the CPU
 type Registers struct {
