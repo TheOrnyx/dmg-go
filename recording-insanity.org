@@ -35,3 +35,14 @@ the prefixed instructions lmao) should be completed by the next day I
 work on this.
 
 Also finally started understanding some of the stupid stuff like (HL) vs HL etc
+
+* <2023-12-08 Fri>Day Four
+Today I finally pretty much finished the unprefixed CPU instructions,
+it was kinda hard for some of it but honestly it kinda helped quite a
+lot as it gave me a bit more understanding for some of the stuff I'm
+doing etc.
+
+The code can definitely be optimized etc and I've got like 50 TODO's
+to check but the groundwork is looking promising. Hopefully by this
+time next week the CPU should be like fully finished and I should be
+moving onto either the memory, PPU or smth else.
