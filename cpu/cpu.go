@@ -26,6 +26,7 @@ type CPU struct {
 	CurrentInstruction *CurrentInstruction //the current instruction to be run
 	MMU mmu.MMU
 	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
+	InterruptsEnabled bool // bool for whether or not the interrupt flag has been enabled
 }
 
 // Reset reset the cpu
@@ -35,6 +36,8 @@ func (cpu *CPU) Reset()  {
 	cpu.SP = 0
 	cpu.Reg.reset()
 	cpu.ResetAllFlags()
+	// cpu.InterruptEnabled = false
+	cpu.hasJumped = false
 	cpu.CurrentInstruction = &CurrentInstruction{Instruction: InstructionsUnprefixed[0x00], Operands: [2]byte{}}
 }
 
