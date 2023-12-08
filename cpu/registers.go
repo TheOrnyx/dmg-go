@@ -24,8 +24,8 @@ type FlagsRegister struct {
 }
 
 // toByte convert the FlagsRegister f to a uint8 byte value
-func (f *FlagsRegister) toByte() uint8 {
-	return uint8(
+func (f *FlagsRegister) toByte() byte {
+	return byte(
 		(boolToBit(f.zero) << ZeroFlagBytePos) |
 			(boolToBit(f.subtract) << SubtractFlagBytePos) |
 			(boolToBit(f.half_carry) << HalfCarryFlagBytePos) |

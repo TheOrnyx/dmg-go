@@ -105,11 +105,19 @@ func (cpu *CPU) Add8BitDataToSP()  {
 	
 	if data < 0 {
 		result = cpu.SP - uint16(-data) // TODO - check
-		
+		carry = int(cpu.SP) - int(-data) < 0 // TODO - gross
+		halfCarry = int(cpu.SP & 0x0FF) - int(uint16(-data) & 0x0FF) < 0 // TODO - check
 	} else {
 		result = cpu.SP + uint16(data)
+		carry = uint32(cpu.SP) + uint32(data) > 0xFFFF
+		halfCarry = (cpu.SP & 0x0FF) + (uint16(data) & 0x0FF) > 0x0FF
+		// TODO - check
 	}
 
+	cpu.ResetFlag(Z)
+	cpu.ResetFlag(N)
+	cpu.SetFlag(C, carry)
+	cpu.SetFlag(H, halfCarry)
 	
 	cpu.SP = result
 }
@@ -456,6 +464,26 @@ func (cpu *CPU) LoadRegAIntoRegCInternalRam()  {
 	// TODO - check
 }
 
+// LoadRegCInteralRamIntoRegA load the data stored in interal ram at the address pointed to by register C into reg A
+func (cpu *CPU) LoadRegCInteralRamIntoRegA()  {
+	cpu.Reg.A = cpu.ReadByte(0xFF00 + uint16(cpu.Reg.C))
+	// TODO - check
+}
+
+// LoadRegAIntoInternalRamData load the contents of register A into internal ram referenced in immediate 16-bit data
+func (cpu *CPU) LoadRegAIntoInternalRamData()  {
+	data := JoinBytes(cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1])
+	cpu.WriteByteToAddr(data, cpu.Reg.A)
+	// TODO - check
+}
+
+// LoadInternalRamDataIntoRegA load the data in internal ram located at immediate data address into register A
+func (cpu *CPU) LoadInternalRamDataIntoRegA()  {
+	data := cpu.CurrentInstruction.Operands[0]
+	cpu.Reg.A = cpu.ReadByte(0xFF00 + uint16(data))
+	// TODO - check
+}
+
 //// ROTATE FUNCTIONS /////
 
 // RotateLeftCarryRegA Rotate Register A left by one
@@ -618,6 +646,13 @@ func (cpu *CPU) Restart(loc byte)  {
 	cpu.hasJumped = true
 }
 
+// JumpToHLReg jump to the value stored in the HL register
+// NOTE - not the data stored in the address, just the data in the register pair
+func (cpu *CPU) JumpToHLReg()  {
+	cpu.PC = cpu.Reg.HL()
+	cpu.hasJumped = true // TODO - maybeeee
+}
+
 //// MISC FUNCTIONS /////
 
 // Nop No Operation. Doesn't do anything, only causes an increase in
@@ -697,6 +732,19 @@ func (cpu *CPU) PopSPIntoAFRegPair()  {
 // PushRegPairOntoSP push the contents of regpair r1,r2 onto the top of the stack pointer
 func (cpu *CPU) PushRegPairOntoSP(r1, r2 *byte)  {
 	cpu.pushSP(JoinBytes(*r1, *r2)) // TODO - check this like actually works
+}
+
+// PushAFRegOntoSP push the AF register pair onto the stack pointer
+func (cpu *CPU) PushAFRegOntoSP()  {
+	flagReg := cpu.Reg.F.toByte()
+	cpu.pushSP(JoinBytes(cpu.Reg.A, flagReg))
+	// TODO - check this
+}
+
+// DisableInterrupts disable interrupts by setting interrupt flag to 0 (false)
+func (cpu *CPU) DisableInterrupts()  {
+	cpu.InterruptsEnabled = false
+	// TODO - check if don't need ot cancel anything
 }
 
 //// INSTRUCTIONS /////
@@ -962,19 +1010,19 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0xE5, "PUSH HL", 0, 4, func(cpu *CPU) {cpu.PushRegPairOntoSP(&cpu.Reg.H, &cpu.Reg.L)}},
 	&Instruction{0xE6, "AND d8", 1, 2, func(cpu *CPU) {cpu.AndRegAWithReg(&cpu.CurrentInstruction.Operands[0])}}, //TODO - check
 	&Instruction{0xE7, "RST 4", 0, 4, func(cpu *CPU) {cpu.Restart(0x20)}},
-	&Instruction{0xE8, "ADD SP, s8", 1, 4, func(cpu *CPU) {}},
-	&Instruction{0xE9, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xEA, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xEB, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xEC, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xED, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xEE, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xEF, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF0, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF1, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF2, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF3, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF4, "", 0, 0, func(cpu *CPU) {}},
+	&Instruction{0xE8, "ADD SP, s8", 1, 4, func(cpu *CPU) {cpu.Add8BitDataToSP()}},
+	&Instruction{0xE9, "JP HL", 0, 1, func(cpu *CPU) {cpu.JumpToHLReg()}},
+	&Instruction{0xEA, "LD (a16), A", 2, 4, func(cpu *CPU) {cpu.LoadRegAIntoInternalRamData()}},
+	&unkownInstruction,
+	&unkownInstruction,
+	&unkownInstruction,
+	&Instruction{0xEE, "XOR d8", 1, 2, func(cpu *CPU) {cpu.XorRegAWithReg(&cpu.CurrentInstruction.Operands[0])}}, // TODO - check
+	&Instruction{0xEF, "RST 5", 0, 4, func(cpu *CPU) {cpu.Restart(0x28)}},
+	&Instruction{0xF0, "LD A, (a8)", 1, 3, func(cpu *CPU) {cpu.LoadInternalRamDataIntoRegA()}},
+	&Instruction{0xF1, "POP AF", 0, 3, func(cpu *CPU) {cpu.PopSPIntoAFRegPair()}},
+	&Instruction{0xF2, "LD A, (C)", 0, 2, func(cpu *CPU) {cpu.LoadRegCInteralRamIntoRegA()}},
+	&Instruction{0xF3, "DI", 0, 1, func(cpu *CPU) {cpu.DisableInterrupts()}},
+	&Instruction{0xF4, "PUSH AF", 0, 4, func(cpu *CPU) {cpu.PushAFRegOntoSP()}},
 	&Instruction{0xF5, "", 0, 0, func(cpu *CPU) {}},
 	&Instruction{0xF6, "", 0, 0, func(cpu *CPU) {}},
 	&Instruction{0xF7, "", 0, 0, func(cpu *CPU) {}},
