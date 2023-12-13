@@ -46,3 +46,13 @@ The code can definitely be optimized etc and I've got like 50 TODO's
 to check but the groundwork is looking promising. Hopefully by this
 time next week the CPU should be like fully finished and I should be
 moving onto either the memory, PPU or smth else.
+
+* <2023-12-13 Wed>Day Five
+Today I started to work on some of the other parts of the emulator,
+that being the MMU, the cartridge and the MBC's etc. It took quite a
+while to kind of understand how everything works but I kindddd of get
+it now
+
+Now I just need to continue implementing the MBC's and connecting
+everything together (as well as you know, actually do the prefixed
+instructions for the CPU)
