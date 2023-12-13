@@ -2,7 +2,6 @@ package cartridge
 
 import (
 	"fmt"
-	"os"
 )
 
 // Memory bank type constants - mapped to their equivalent value in rom[0x0147]
@@ -58,13 +57,16 @@ type CartType struct {
 }
 
 type Cartridge struct {
+	Title string
 	ROM           []byte
 	RAMSize       int
 	ROMSize       int
 	HasCGBSupport bool // whether the CGB flag is set -> fonud in rom[0x0143]
-	GameTitle     []byte
 	RomType       byte
 	Type          CartType
+
+	MBC MemoryBankController // the memory bank controller
+	
 	IsJapanese bool
 	OldLicenseeCode byte // the old licensee code, if 33 then use new licensee code
 	NewLicenseeCode byte // the new licensee code, only used if OldLicenseeCode is 33
@@ -72,20 +74,20 @@ type Cartridge struct {
 }
 
 // LoadROM load and initialize a ROM based on cart path
-func LoadROM(path string) (*Cartridge, error) {
-	buffer, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("Failed to load rom file: %s", err)
-	}
-
-	return &Cartridge{ROM: buffer}, nil
+func LoadROM(rom []byte) (*Cartridge, error) {
+	newCart := new(Cartridge)
+	newCart.ROM = rom // TODO - check this?
+	
+	newCart.InitCart(rom)
+	
+	return newCart, nil
 }
 
 // InitCart initialize the cart
 func (c *Cartridge) InitCart(rom []byte) error {
 
 	c.HasCGBSupport = rom[0x0143] == 0x80 || rom[0x0143] == 0xC0
-
+	c.Title = string(rom[0x134:0x0143]) //TODO - make this actually good
 	romSize := rom[0x0148]
 	c.ROMSize = 0x8000 << romSize // TODO maybe error handle here?
 
@@ -112,6 +114,15 @@ func (c *Cartridge) InitCart(rom []byte) error {
 
 	c.OldLicenseeCode = rom[0x014B]
 	// Check for new licensee code later
+
+	switch c.Type.ID {
+	case MBC_0:
+		c.MBC = NewMBC0(rom)
+	case MBC_1, MBC_1_RAM:
+		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, false)
+	case MBC_1_RAM_BATTERY:
+		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, true)
+	}
 
 	return nil
 }
