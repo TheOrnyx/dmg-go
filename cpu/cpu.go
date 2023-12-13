@@ -27,6 +27,7 @@ type CPU struct {
 	MMU mmu.MMU
 	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
 	InterruptsEnabled bool // bool for whether or not the interrupt flag has been enabled
+	Halted bool // whether or not the CPU is halted
 }
 
 // Reset reset the cpu
@@ -36,6 +37,7 @@ func (cpu *CPU) Reset()  {
 	cpu.SP = 0
 	cpu.Reg.reset()
 	cpu.ResetAllFlags()
+	cpu.Halted = false
 	// cpu.InterruptEnabled = false
 	cpu.hasJumped = false
 	cpu.CurrentInstruction = &CurrentInstruction{Instruction: InstructionsUnprefixed[0x00], Operands: [2]byte{}}
@@ -81,19 +83,21 @@ func (cpu *CPU) SetFlag(flag int, state bool)  {
 
 // Step the step function for the cpu
 func (cpu *CPU) Step() int {
-	opCode := cpu.ReadByte(cpu.PC)
-	cpu.PC++
-	
-	if opCode == 0xCB { // use the prefixed instructions 
+	if !cpu.Halted {	
+		opCode := cpu.ReadByte(cpu.PC)
+		cpu.PC++
 		
-	} else {
-		cpu.CompileInstruction(InstructionsUnprefixed[opCode])
-	}
+		if opCode == 0xCB { // use the prefixed instructions 
+			
+		} else {
+			cpu.CompileInstruction(InstructionsUnprefixed[opCode])
+		}
 
-	cpu.CurrentInstruction.Instruction.ExecFun(cpu)
+		cpu.CurrentInstruction.Instruction.ExecFun(cpu)
 
-	if true { // replace with some sort of jump check later
-		cpu.IncrementPC(len(cpu.CurrentInstruction.Operands)+1)
+		if true { // replace with some sort of jump check later
+			cpu.IncrementPC(len(cpu.CurrentInstruction.Operands)+1)
+		}
 	}
 	
 	return 0
@@ -140,8 +144,12 @@ func (cpu *CPU) CompileInstruction(instruction *Instruction)  {
 
 // ReadByte reads the byte at address addr and returns it
 func (cpu *CPU) ReadByte(addr uint16) byte {
-	// TODO  - this should read a byte from the MMU but I'm too lazy to implement that atm
-	return 0
+	return cpu.MMU.ReadByte(addr)
+}
+
+// WriteByteToAddr write data to address located at addr
+func (cpu *CPU) WriteByteToAddr(addr uint16, data byte)  {
+	cpu.MMU.WriteByte(addr, data)
 }
 
 /////////////////////////////
@@ -219,10 +227,5 @@ func (cpu *CPU) decByte(val byte) byte {
 	
 	
 	return result
-}
-
-// WriteByteToAddr write data to address located at addr
-func (cpu *CPU) WriteByteToAddr(addr uint16, data byte)  {
-	// TODO add bit for writing to the MMU here
 }
 

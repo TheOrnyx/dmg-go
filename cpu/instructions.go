@@ -76,7 +76,7 @@ func (cpu *CPU) Add8BitRegToRegAWithCarry(r *byte) {
 }
 
 // Add8BitDataToRegA add the 8-bit immediate data to reg A and store result in reg A
-func (cpu *CPU) Add8BitDataToRegA()  {
+func (cpu *CPU) Add8BitDataToRegA() {
 	cpu.Reg.A = cpu.addBytes(cpu.Reg.A, cpu.CurrentInstruction.Operands[0])
 	// TODO - test this is right
 }
@@ -98,19 +98,19 @@ func (cpu *CPU) AddSPToHLReg() {
 }
 
 // Add8BitDataToSP add immediate 8-bit data to the stack pointer and store result as stack pointer
-func (cpu *CPU) Add8BitDataToSP()  {
+func (cpu *CPU) Add8BitDataToSP() {
 	var result uint16
 	var carry, halfCarry bool
 	data := int8(cpu.CurrentInstruction.Operands[0])
-	
+
 	if data < 0 {
-		result = cpu.SP - uint16(-data) // TODO - check
-		carry = int(cpu.SP) - int(-data) < 0 // TODO - gross
-		halfCarry = int(cpu.SP & 0x0FF) - int(uint16(-data) & 0x0FF) < 0 // TODO - check
+		result = cpu.SP - uint16(-data)                            // TODO - check
+		carry = int(cpu.SP)-int(-data) < 0                         // TODO - gross
+		halfCarry = int(cpu.SP&0x0FF)-int(uint16(-data)&0x0FF) < 0 // TODO - check
 	} else {
 		result = cpu.SP + uint16(data)
-		carry = uint32(cpu.SP) + uint32(data) > 0xFFFF
-		halfCarry = (cpu.SP & 0x0FF) + (uint16(data) & 0x0FF) > 0x0FF
+		carry = uint32(cpu.SP)+uint32(data) > 0xFFFF
+		halfCarry = (cpu.SP&0x0FF)+(uint16(data)&0x0FF) > 0x0FF
 		// TODO - check
 	}
 
@@ -118,8 +118,34 @@ func (cpu *CPU) Add8BitDataToSP()  {
 	cpu.ResetFlag(N)
 	cpu.SetFlag(C, carry)
 	cpu.SetFlag(H, halfCarry)
-	
+
 	cpu.SP = result
+}
+
+// Add8BitDataToSPIntoHLReg add the immediate 8-bit data to the stack
+// pointer value and store the result in the HL register
+func (cpu *CPU) Add8BitDataToSPIntoHLReg() {
+	var result uint16
+	var carry, halfCarry bool
+	data := int8(cpu.CurrentInstruction.Operands[0])
+
+	if data < 0 {
+		result = cpu.SP - uint16(-data)                            // TODO - check
+		carry = int(cpu.SP)-int(-data) < 0                         // TODO - gross
+		halfCarry = int(cpu.SP&0x0FF)-int(uint16(-data)&0x0FF) < 0 // TODO - check
+	} else {
+		result = cpu.SP + uint16(data)
+		carry = uint32(cpu.SP)+uint32(data) > 0xFFFF
+		halfCarry = (cpu.SP&0x0FF)+(uint16(data)&0x0FF) > 0x0FF
+		// TODO - check
+	}
+
+	cpu.ResetFlag(Z)
+	cpu.ResetFlag(N)
+	cpu.SetFlag(C, carry)
+	cpu.SetFlag(H, halfCarry)
+
+	cpu.Reg.H, cpu.Reg.L = Split16(result)
 }
 
 //// SUB FUNCTIONS /////
@@ -141,18 +167,18 @@ func (cpu *CPU) Sub8BitRegFromRegA(r *byte) {
 
 // SubHLRegDataFromRegA subtract the data stored at address in reg HL
 // from reg A and store the result in reg A
-func (cpu *CPU) SubHLRegDataFromRegA()  {
+func (cpu *CPU) SubHLRegDataFromRegA() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.Sub8BitRegFromRegA(&data)
 }
 
 // Sub8BitRegFromRegAWithCarry subtract reg r from reg A with carry (A - C - r) and store result in reg A
-func (cpu *CPU) Sub8BitRegFromRegAWithCarry(r *byte)  {
+func (cpu *CPU) Sub8BitRegFromRegAWithCarry(r *byte) {
 	carryFlag := boolToBit(cpu.Reg.F.carry)
 	result := cpu.Reg.A - carryFlag - *r
 
-	carry := int(cpu.Reg.A) - int(carryFlag) - int(*r) < 0
-	halfCarry := int(cpu.Reg.A&0x0F) - int(carryFlag & 0x0F) - int(*r&0x0F) < 0
+	carry := int(cpu.Reg.A)-int(carryFlag)-int(*r) < 0
+	halfCarry := int(cpu.Reg.A&0x0F)-int(carryFlag&0x0F)-int(*r&0x0F) < 0
 
 	cpu.SetFlag(N, true)
 	cpu.SetFlag(Z, result == 0)
@@ -160,19 +186,19 @@ func (cpu *CPU) Sub8BitRegFromRegAWithCarry(r *byte)  {
 	cpu.SetFlag(H, halfCarry)
 
 	// TODO- check this
-	
+
 	cpu.Reg.A = result
 }
 
 // SubHLRegDataFromRegAWithCarry subtract the data stored at the
 // address in reg HL from reg A with carry and store the result in reg A
-func (cpu *CPU) SubHLRegDataFromRegAWithCarry()  {
+func (cpu *CPU) SubHLRegDataFromRegAWithCarry() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.Sub8BitRegFromRegAWithCarry(&data)
 }
 
 // Sub8BitDataFromRegA subtract the immediate 8-bit data from reg A and store the result in reg A
-func (cpu *CPU) Sub8BitDataFromRegA()  {
+func (cpu *CPU) Sub8BitDataFromRegA() {
 	cpu.Sub8BitRegFromRegA(&cpu.CurrentInstruction.Operands[0])
 }
 
@@ -180,7 +206,7 @@ func (cpu *CPU) Sub8BitDataFromRegA()  {
 
 // AndRegAWithReg execute an AND comparison between reg A and r
 // Store the result in register A
-func (cpu *CPU) AndRegAWithReg(r *byte)  {
+func (cpu *CPU) AndRegAWithReg(r *byte) {
 	result := cpu.Reg.A & *r
 
 	cpu.SetFlag(Z, result == 0)
@@ -193,54 +219,54 @@ func (cpu *CPU) AndRegAWithReg(r *byte)  {
 
 // AndRegAWithHLData execute an AND comparison between reg A and data pointed to by HL Reg
 // Store the result in register A
-func (cpu *CPU) AndRegAWithHLData()  {
+func (cpu *CPU) AndRegAWithHLData() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.AndRegAWithReg(&data)
 }
 
 // XorRegAWithReg execute a XOR comparison between reg A and r
 // Store the result in register A
-func (cpu *CPU) XorRegAWithReg(r *byte)  {
+func (cpu *CPU) XorRegAWithReg(r *byte) {
 	result := cpu.Reg.A ^ *r
 
 	cpu.SetFlag(Z, result == 0)
 	cpu.ResetFlag(N)
 	cpu.ResetFlag(H)
 	cpu.ResetFlag(C)
-	
+
 	cpu.Reg.A = result
 }
 
 // XorRegAWithHLData execute XOR comparison between reg A and HL Reg data stored in address
 // Store the result in reg A
-func (cpu *CPU) XorRegAWithHLData()  {
+func (cpu *CPU) XorRegAWithHLData() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.XorRegAWithReg(&data)
 }
 
 // OrRegAWithReg execute an OR comparison between reg A and r
 // Store result in reg A
-func (cpu *CPU) OrRegAWithReg(r *byte)  {
+func (cpu *CPU) OrRegAWithReg(r *byte) {
 	result := cpu.Reg.A | *r
 
 	cpu.SetFlag(Z, result == 0)
 	cpu.ResetFlag(N)
 	cpu.ResetFlag(H)
 	cpu.ResetFlag(C)
-	
+
 	cpu.Reg.A = result
 }
 
 // OrRegAWithHLData execute an OR comparison between reg A and data stored in HL reg address
 // Store result in reg A
-func (cpu *CPU) OrRegAWithHLData()  {
+func (cpu *CPU) OrRegAWithHLData() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.OrRegAWithReg(&data)
 }
 
 // CompareRegAWithReg subtract r from reg A (A - r) and set flags accordingly
 // Does not change reg A, only sets the flags
-func (cpu *CPU) CompareRegAWithReg(r *byte)  {
+func (cpu *CPU) CompareRegAWithReg(r *byte) {
 	result := cpu.Reg.A - *r
 
 	carry := int(cpu.Reg.A)-int(*r) < 0
@@ -254,7 +280,7 @@ func (cpu *CPU) CompareRegAWithReg(r *byte)  {
 
 // CompareRegAWithHLData subtract (compare) data stored in HL address (A - data) and set flags
 // Doesn't change reg A, only sets the flags
-func (cpu *CPU) CompareRegAWithHLData()  {
+func (cpu *CPU) CompareRegAWithHLData() {
 	data := cpu.ReadByte(cpu.Reg.HL())
 	cpu.CompareRegAWithReg(&data)
 }
@@ -450,7 +476,7 @@ func (cpu *CPU) LoadStackPointerInto16bData() {
 }
 
 // LoadRegAIntoInternalRam load contents of register A into internal ram pointed to by immediate 8-bit(?) data
-func (cpu *CPU) LoadRegAIntoInternalRam()  {
+func (cpu *CPU) LoadRegAIntoInternalRam() {
 	data := cpu.CurrentInstruction.Operands[0]
 	addr := 0xFF00 + uint16(data)
 	cpu.WriteByteToAddr(addr, cpu.Reg.A)
@@ -458,30 +484,43 @@ func (cpu *CPU) LoadRegAIntoInternalRam()  {
 }
 
 // LoadRegAIntoRegCInternalRam load the contents of reg A into the location of internal ram pointed to by reg C
-func (cpu *CPU) LoadRegAIntoRegCInternalRam()  {
+func (cpu *CPU) LoadRegAIntoRegCInternalRam() {
 	addr := 0xFF00 + uint16(cpu.Reg.C)
 	cpu.WriteByteToAddr(addr, cpu.Reg.A)
 	// TODO - check
 }
 
 // LoadRegCInteralRamIntoRegA load the data stored in interal ram at the address pointed to by register C into reg A
-func (cpu *CPU) LoadRegCInteralRamIntoRegA()  {
+func (cpu *CPU) LoadRegCInteralRamIntoRegA() {
 	cpu.Reg.A = cpu.ReadByte(0xFF00 + uint16(cpu.Reg.C))
 	// TODO - check
 }
 
 // LoadRegAIntoInternalRamData load the contents of register A into internal ram referenced in immediate 16-bit data
-func (cpu *CPU) LoadRegAIntoInternalRamData()  {
+func (cpu *CPU) LoadRegAIntoInternalRamData() {
 	data := JoinBytes(cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1])
 	cpu.WriteByteToAddr(data, cpu.Reg.A)
 	// TODO - check
 }
 
 // LoadInternalRamDataIntoRegA load the data in internal ram located at immediate data address into register A
-func (cpu *CPU) LoadInternalRamDataIntoRegA()  {
+func (cpu *CPU) LoadInternalRamDataIntoRegA() {
 	data := cpu.CurrentInstruction.Operands[0]
 	cpu.Reg.A = cpu.ReadByte(0xFF00 + uint16(data))
 	// TODO - check
+}
+
+// LoadHLRegIntoSP load the HL register value into the stack pointer
+// basically just SP = HL
+func (cpu *CPU) LoadHLRegIntoSP() {
+	cpu.SP = cpu.Reg.HL()
+	// TODO check
+}
+
+// Load16BitDataIntoRegA load data pointed to by immediate 16-bit address into register A
+func (cpu *CPU) Load16BitDataIntoRegA() {
+	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
+	cpu.Reg.A = cpu.ReadByte(JoinBytes(msb, lsb)) // TODO - check this is right order and stuff
 }
 
 //// ROTATE FUNCTIONS /////
@@ -523,6 +562,63 @@ func (cpu *CPU) RotateLeftRegA() {
 	// TODO - check this is actually right, have no idea if you are supposed to set bit 0 to previous carry flag
 }
 
+// RotateLeftReg Rotate reg r left
+func (cpu *CPU) RotateLeftReg(r *byte)  {
+	var bit7 bool = false
+
+	if *r & 0x80 == 0x80 {
+		bit7 = true
+	}
+
+	outcome := (*r << 1) | (boolToBit(cpu.Reg.F.carry) & 0x01)
+
+	cpu.SetFlag(C, bit7)
+	cpu.SetFlag(Z, outcome == 0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+	*r = outcome
+}
+
+// RotateLeftCarryReg rotate given register r left through carry flag
+func (cpu *CPU) RotateLeftCarryReg(r *byte)  {
+	var bit7 bool = false
+
+	if *r & 0x80 == 0x80 {
+		bit7 = true
+	}
+
+	outcome := ((*r << 1) & 0xFF) | (boolToBit(bit7) & 0x01)
+
+	
+	cpu.SetFlag(C, bit7)
+	cpu.SetFlag(Z, outcome == 0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+
+	*r = outcome
+}
+
+// RotateLeftCarryHLData rotate the data in the HL addr left through the carry flag
+func (cpu *CPU) RotateLeftCarryHLData()  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+
+	var bit7 bool = false
+
+	if data & 0x80 == 0x80 {
+		bit7 = true
+	}
+
+	outcome := ((data << 1) & 0xFF) | (boolToBit(bit7) & 0x01)
+
+	
+	cpu.SetFlag(C, bit7)
+	cpu.SetFlag(Z, outcome == 0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+
+	cpu.WriteByteToAddr(cpu.Reg.HL(), outcome)
+}
+
 // RotateRightCarryRegA rorate Register A right by one
 // Store value of bit 0 in the carry flag
 func (cpu *CPU) RotateRightCarryRegA() {
@@ -554,6 +650,44 @@ func (cpu *CPU) RotateRightRegA() {
 	cpu.ResetAllFlags()
 	cpu.SetFlag(C, bit0)
 	cpu.Reg.A = outcome
+}
+
+// RotateRightCarryReg rotate reg r right through carry flag
+func (cpu *CPU) RotateRightCarryReg(r *byte)  {
+	var bit0 bool = false
+
+	if *r & 0x01 == 0x01 {
+		bit0 = true
+	}
+
+	result := (*r >> 1) | (boolToBit(bit0) << 7 & 0x80)
+
+	cpu.SetFlag(C, bit0)
+	cpu.SetFlag(Z, result == 0)
+	cpu.ResetFlag(H)
+	cpu.ResetFlag(N)
+
+	*r = result
+}
+
+// RotateRightCarryHLData rotate the data stored in HL address right through the carry flag
+func (cpu *CPU) RotateRightCarryHLData()  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+
+	var bit0 bool = false
+
+	if data & 0x01 == 0x01 {
+		bit0 = true
+	}
+
+	result := (data >> 1) | (boolToBit(bit0) << 7 & 0x80)
+
+	cpu.SetFlag(C, bit0)
+	cpu.SetFlag(Z, result == 0)
+	cpu.ResetFlag(H)
+	cpu.ResetFlag(N)
+
+	cpu.WriteByteToAddr(cpu.Reg.HL(), result)
 }
 
 //// JUMP FUNCTIONS /////
@@ -592,7 +726,7 @@ func (cpu *CPU) JumpConditionalRelative8bit(cond *bool, jumpWhen bool) {
 
 // JumpConditional16Bit jump to immediate 16-bit value when cond = jumpWhen
 // basically PC = data when cond = jumpWhen
-func (cpu *CPU) JumpConditional16Bit(cond *bool, jumpWhen bool)  {
+func (cpu *CPU) JumpConditional16Bit(cond *bool, jumpWhen bool) {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
 	data := JoinBytes(msb, lsb)
 
@@ -606,14 +740,14 @@ func (cpu *CPU) JumpConditional16Bit(cond *bool, jumpWhen bool)  {
 }
 
 // Jump16Bit jump to the value represented by the immediate 16-bit value
-func (cpu *CPU) Jump16Bit()  {
+func (cpu *CPU) Jump16Bit() {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
 	cpu.PC = JoinBytes(msb, lsb)
 	cpu.hasJumped = true
 }
 
 // CallFunctionConditional conditional functional call to absolute address pointed to in immediate 16-bit data
-func (cpu *CPU) CallFunctionConditional(flag *bool, callWhen bool)  {
+func (cpu *CPU) CallFunctionConditional(flag *bool, callWhen bool) {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
 	cpu.PC += 2 // TODO - check whether should be 2 or 3 (one for each byte read, opcode, data etc)
 
@@ -629,10 +763,10 @@ func (cpu *CPU) CallFunctionConditional(flag *bool, callWhen bool)  {
 
 // CallFunctionUnconditional make an unconditional function call to address specified by immediate 16-bit data
 // Also put the current PC on the top of the Stack pointer
-func (cpu *CPU) CallFunctionUnconditional()  {
+func (cpu *CPU) CallFunctionUnconditional() {
 	newVal := JoinBytes(cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1])
 	cpu.PC += 2
-	
+
 	cpu.pushSP(cpu.PC)
 	cpu.PC = newVal
 	// TODO - check this is right
@@ -640,7 +774,7 @@ func (cpu *CPU) CallFunctionUnconditional()  {
 
 // Restart Unconditional function call to the absolute fixed address defined by the opcode.
 // Basically just like moves you to the specific point based on the opcode - passed in as loc
-func (cpu *CPU) Restart(loc byte)  {
+func (cpu *CPU) Restart(loc byte) {
 	cpu.pushSP(cpu.PC)
 	cpu.PC = uint16(loc)
 	cpu.hasJumped = true
@@ -648,7 +782,7 @@ func (cpu *CPU) Restart(loc byte)  {
 
 // JumpToHLReg jump to the value stored in the HL register
 // NOTE - not the data stored in the address, just the data in the register pair
-func (cpu *CPU) JumpToHLReg()  {
+func (cpu *CPU) JumpToHLReg() {
 	cpu.PC = cpu.Reg.HL()
 	cpu.hasJumped = true // TODO - maybeeee
 }
@@ -668,6 +802,7 @@ func (cpu *CPU) Stop() {
 
 // Halt stop system clock and enter halt mode
 func (cpu *CPU) Halt() {
+	cpu.Halted = true
 	// TODO - implement this
 }
 
@@ -690,7 +825,7 @@ func (cpu *CPU) ComplementCarryFlag() {
 	cpu.Reg.F.carry = !cpu.Reg.F.carry
 }
 
-// ReturnConditional return from function when flag is same as 
+// ReturnConditional return from function when flag is same as
 func (cpu *CPU) ReturnConditional(flag *bool, returnWhen bool) {
 	if *flag == returnWhen {
 		cpu.PC = cpu.popSP()
@@ -703,25 +838,25 @@ func (cpu *CPU) ReturnConditional(flag *bool, returnWhen bool) {
 
 // ReturnFromFunc unconditional return from a function
 // Basically just set the program counter to be the popped off value from the Stack pointer
-func (cpu *CPU) ReturnFromFunc()  {
+func (cpu *CPU) ReturnFromFunc() {
 	cpu.PC = cpu.popSP()
 }
 
 // ReturnFromFuncInterrupt return from a function unconditionally and enable interrupts
-func (cpu *CPU) ReturnFromFuncInterrupt()  {
+func (cpu *CPU) ReturnFromFuncInterrupt() {
 	cpu.PC = cpu.popSP()
 	cpu.InterruptsEnabled = true
 }
 
 // PopSPIntoRegPair pop the stack pointer and put the address into reg pair r1,r2
-func (cpu *CPU) PopSPIntoRegPair(r1, r2 *byte)  {
+func (cpu *CPU) PopSPIntoRegPair(r1, r2 *byte) {
 	addr := cpu.popSP()
 	*r2, *r1 = Split16(addr) // TODO - check the order is right here
 }
 
 // PopSPIntoAFRegPair pop the stack pointer and put the value into regpair AF
 // Exists as it means I need to set the flag register properly
-func (cpu *CPU) PopSPIntoAFRegPair()  {
+func (cpu *CPU) PopSPIntoAFRegPair() {
 	addr := cpu.popSP()
 	high, low := Split16(addr)
 	cpu.Reg.A = high
@@ -730,30 +865,69 @@ func (cpu *CPU) PopSPIntoAFRegPair()  {
 }
 
 // PushRegPairOntoSP push the contents of regpair r1,r2 onto the top of the stack pointer
-func (cpu *CPU) PushRegPairOntoSP(r1, r2 *byte)  {
+func (cpu *CPU) PushRegPairOntoSP(r1, r2 *byte) {
 	cpu.pushSP(JoinBytes(*r1, *r2)) // TODO - check this like actually works
 }
 
 // PushAFRegOntoSP push the AF register pair onto the stack pointer
-func (cpu *CPU) PushAFRegOntoSP()  {
+func (cpu *CPU) PushAFRegOntoSP() {
 	flagReg := cpu.Reg.F.toByte()
 	cpu.pushSP(JoinBytes(cpu.Reg.A, flagReg))
 	// TODO - check this
 }
 
 // DisableInterrupts disable interrupts by setting interrupt flag to 0 (false)
-func (cpu *CPU) DisableInterrupts()  {
+func (cpu *CPU) DisableInterrupts() {
 	cpu.InterruptsEnabled = false
 	// TODO - check if don't need ot cancel anything
+}
+
+// EnableInterrupts enable interrupts
+func (cpu *CPU) EnableInterrupts() {
+	cpu.InterruptsEnabled = true // TODO - check this function is just this
+}
+
+// Daa decimal adjust accumulator
+// TODO - I have no idea what the FUCK this does
+func (cpu *CPU) Daa() {
+	var a uint16 = uint16(cpu.Reg.A)
+
+	if cpu.Reg.F.subtract {
+		if cpu.Reg.F.half_carry {
+			a = (a - 6) & 0xFF
+		}
+
+		if cpu.Reg.F.carry {
+			a -= 0x60
+		}
+	} else {
+		if cpu.Reg.F.half_carry || (a&0x0F) > 9 {
+			a += 0x06
+		}
+
+		if cpu.Reg.F.carry || a > 0x9F {
+			a += 0x60
+		}
+	}
+
+	cpu.ResetFlag(H)
+
+	if (a & 0x100) == 0x100 {
+		cpu.SetFlag(C, true)
+	}
+
+	a &= 0xFF
+	cpu.SetFlag(Z, a == 0)
+	cpu.Reg.A = byte(a)
 }
 
 //// INSTRUCTIONS /////
 
 var unkownInstruction = Instruction{
-	Desc: "Unkown Instruction",
+	Desc:        "Unkown Instruction",
 	OperandAmnt: 0,
-	Cycles: 1,
-	ExecFun: func(cpu *CPU) {warnLog.Println("Unkown instruction executed.... continuing anyway")},
+	Cycles:      1,
+	ExecFun:     func(cpu *CPU) { warnLog.Println("Unkown instruction executed.... continuing anyway") },
 }
 
 // InstructionsUnprefixed - the slice to represent each of the
@@ -800,7 +974,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x24, "INC H", 0, 1, func(cpu *CPU) { cpu.Inc8BitReg(&cpu.Reg.H) }},
 	&Instruction{0x25, "DEC H", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.H) }},
 	&Instruction{0x26, "LD H, d8", 1, 2, func(cpu *CPU) { cpu.Load8BitDataInto8BitReg(&cpu.Reg.H) }},
-	&Instruction{0x27, "DAA", 0, 1, func(cpu *CPU) {}}, // TODO - implement this
+	&Instruction{0x27, "DAA", 0, 1, func(cpu *CPU) { cpu.Daa() }},
 	&Instruction{0x28, "JR Z, s8", 1, 2, func(cpu *CPU) { cpu.JumpConditionalRelative8bit(&cpu.Reg.F.zero, true) }},
 	&Instruction{0x29, "ADD HL, HL", 0, 2, func(cpu *CPU) { cpu.Add16bRegToHLReg(&cpu.Reg.H, &cpu.Reg.L) }}, // lmao
 	&Instruction{0x2A, "LD A, (HL+)", 0, 2, func(cpu *CPU) { cpu.Load16BitAddrIncInto8BitReg(&cpu.Reg.H, &cpu.Reg.L, &cpu.Reg.A) }},
@@ -933,7 +1107,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x9D, "SBC A, L", 0, 1, func(cpu *CPU) { cpu.Sub8BitRegFromRegAWithCarry(&cpu.Reg.L) }},
 	&Instruction{0x9E, "SBC A, (HL)", 0, 2, func(cpu *CPU) { cpu.SubHLRegDataFromRegAWithCarry() }},
 	&Instruction{0x9F, "SBC A, A", 0, 1, func(cpu *CPU) { cpu.Sub8BitRegFromRegAWithCarry(&cpu.Reg.A) }},
-	
+
 	&Instruction{0xA0, "AND B", 0, 1, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.Reg.B) }},
 	&Instruction{0xA1, "AND C", 0, 1, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.Reg.C) }},
 	&Instruction{0xA2, "AND D", 0, 1, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.Reg.D) }},
@@ -942,96 +1116,355 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0xA5, "AND L", 0, 1, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.Reg.L) }},
 	&Instruction{0xA6, "AND (HL)", 0, 2, func(cpu *CPU) { cpu.AndRegAWithHLData() }},
 	&Instruction{0xA7, "AND A", 0, 1, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.Reg.A) }},
-	
+
 	&Instruction{0xA8, "XOR B", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.B) }},
 	&Instruction{0xA9, "XOR C", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.C) }},
 	&Instruction{0xAA, "XOR D", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.D) }},
 	&Instruction{0xAB, "XOR E", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.E) }},
 	&Instruction{0xAC, "XOR H", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.H) }},
 	&Instruction{0xAD, "XOR L", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.L) }},
-	&Instruction{0xAE, "XOR (HL)", 0, 2, func(cpu *CPU) { cpu.XorRegAWithHLData() }},    
+	&Instruction{0xAE, "XOR (HL)", 0, 2, func(cpu *CPU) { cpu.XorRegAWithHLData() }},
 	&Instruction{0xAF, "XOR A", 0, 1, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.Reg.A) }},
-	
+
 	&Instruction{0xB0, "OR B", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.B) }},
 	&Instruction{0xB1, "OR C", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.C) }},
 	&Instruction{0xB2, "OR D", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.D) }},
 	&Instruction{0xB3, "OR E", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.E) }},
 	&Instruction{0xB4, "OR H", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.H) }},
 	&Instruction{0xB5, "OR L", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.L) }},
-	&Instruction{0xB6, "OR (HL)", 0, 2, func(cpu *CPU) { cpu.OrRegAWithHLData() }},    
+	&Instruction{0xB6, "OR (HL)", 0, 2, func(cpu *CPU) { cpu.OrRegAWithHLData() }},
 	&Instruction{0xB7, "OR A", 0, 1, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.Reg.A) }},
-	
+
 	&Instruction{0xB8, "CP B", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.B) }},
 	&Instruction{0xB9, "CP C", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.C) }},
 	&Instruction{0xBA, "CP D", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.D) }},
 	&Instruction{0xBB, "CP E", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.E) }},
 	&Instruction{0xBC, "CP H", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.H) }},
 	&Instruction{0xBD, "CP L", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.L) }},
-	&Instruction{0xBE, "CP (HL)", 0, 2, func(cpu *CPU) { cpu.CompareRegAWithHLData() }},    
+	&Instruction{0xBE, "CP (HL)", 0, 2, func(cpu *CPU) { cpu.CompareRegAWithHLData() }},
 	&Instruction{0xBF, "CP A", 0, 1, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.Reg.A) }},
-	
-	&Instruction{0xC0, "RET NZ", 0, 2, func(cpu *CPU) {cpu.ReturnConditional(&cpu.Reg.F.zero, false)}},
-	&Instruction{0xC1, "POP BC", 0, 3, func(cpu *CPU) {cpu.PopSPIntoRegPair(&cpu.Reg.B, &cpu.Reg.C)}},
-	&Instruction{0xC2, "JP NZ, a16", 2, 3, func(cpu *CPU) {cpu.JumpConditional16Bit(&cpu.Reg.F.zero, false)}},
-	&Instruction{0xC3, "JP a16", 2, 4, func(cpu *CPU) {cpu.Jump16Bit()}},
-	&Instruction{0xC4, "CALL NZ, a16", 2, 3, func(cpu *CPU) {cpu.CallFunctionConditional(&cpu.Reg.F.zero, false)}},
-	&Instruction{0xC5, "PUSH BC", 0, 4, func(cpu *CPU) {cpu.PushRegPairOntoSP(&cpu.Reg.B, &cpu.Reg.C)}},
-	&Instruction{0xC6, "ADD A, d8", 1, 2, func(cpu *CPU) {cpu.Add8BitDataToRegA()}},
-	&Instruction{0xC7, "RST 0", 0, 4, func(cpu *CPU) {cpu.Restart(0x00)}},
-	&Instruction{0xC8, "RET Z", 0, 2, func(cpu *CPU) {cpu.ReturnConditional(&cpu.Reg.F.zero, true)}},
-	&Instruction{0xC9, "RET", 0, 4, func(cpu *CPU) {cpu.ReturnFromFunc()}},
-	&Instruction{0xCA, "JP Z, a16", 2, 3, func(cpu *CPU) {cpu.JumpConditional16Bit(&cpu.Reg.F.zero, true)}},
+
+	&Instruction{0xC0, "RET NZ", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.zero, false) }},
+	&Instruction{0xC1, "POP BC", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(&cpu.Reg.B, &cpu.Reg.C) }},
+	&Instruction{0xC2, "JP NZ, a16", 2, 3, func(cpu *CPU) { cpu.JumpConditional16Bit(&cpu.Reg.F.zero, false) }},
+	&Instruction{0xC3, "JP a16", 2, 4, func(cpu *CPU) { cpu.Jump16Bit() }},
+	&Instruction{0xC4, "CALL NZ, a16", 2, 3, func(cpu *CPU) { cpu.CallFunctionConditional(&cpu.Reg.F.zero, false) }},
+	&Instruction{0xC5, "PUSH BC", 0, 4, func(cpu *CPU) { cpu.PushRegPairOntoSP(&cpu.Reg.B, &cpu.Reg.C) }},
+	&Instruction{0xC6, "ADD A, d8", 1, 2, func(cpu *CPU) { cpu.Add8BitDataToRegA() }},
+	&Instruction{0xC7, "RST 0", 0, 4, func(cpu *CPU) { cpu.Restart(0x00) }},
+	&Instruction{0xC8, "RET Z", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.zero, true) }},
+	&Instruction{0xC9, "RET", 0, 4, func(cpu *CPU) { cpu.ReturnFromFunc() }},
+	&Instruction{0xCA, "JP Z, a16", 2, 3, func(cpu *CPU) { cpu.JumpConditional16Bit(&cpu.Reg.F.zero, true) }},
 	&unkownInstruction,
-	&Instruction{0xCC, "CALL Z, a16", 2, 3, func(cpu *CPU) {cpu.CallFunctionConditional(&cpu.Reg.F.zero, true)}},
-	&Instruction{0xCD, "CALL a16", 2, 6, func(cpu *CPU) {cpu.CallFunctionUnconditional()}},
-	&Instruction{0xCE, "ADC A, d8", 1, 2, func(cpu *CPU) {cpu.Add8BitRegToRegAWithCarry(&cpu.CurrentInstruction.Operands[0])}}, // TODO - check
-	&Instruction{0xCF, "RST 1", 0, 4, func(cpu *CPU) {cpu.Restart(0x08)}},
-	&Instruction{0xD0, "RET NC", 0, 2, func(cpu *CPU) {cpu.ReturnConditional(&cpu.Reg.F.zero, false)}},
-	&Instruction{0xD1, "POP DE", 0, 3, func(cpu *CPU) {cpu.PopSPIntoRegPair(&cpu.Reg.D, &cpu.Reg.E)}},
-	&Instruction{0xD2, "JP NC, a16", 2, 3, func(cpu *CPU) {cpu.JumpConditional16Bit(&cpu.Reg.F.carry, false)}},
+	&Instruction{0xCC, "CALL Z, a16", 2, 3, func(cpu *CPU) { cpu.CallFunctionConditional(&cpu.Reg.F.zero, true) }},
+	&Instruction{0xCD, "CALL a16", 2, 6, func(cpu *CPU) { cpu.CallFunctionUnconditional() }},
+	&Instruction{0xCE, "ADC A, d8", 1, 2, func(cpu *CPU) { cpu.Add8BitRegToRegAWithCarry(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
+	&Instruction{0xCF, "RST 1", 0, 4, func(cpu *CPU) { cpu.Restart(0x08) }},
+	&Instruction{0xD0, "RET NC", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.zero, false) }},
+	&Instruction{0xD1, "POP DE", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(&cpu.Reg.D, &cpu.Reg.E) }},
+	&Instruction{0xD2, "JP NC, a16", 2, 3, func(cpu *CPU) { cpu.JumpConditional16Bit(&cpu.Reg.F.carry, false) }},
 	&unkownInstruction,
-	&Instruction{0xD4, "CALL NC, a16", 2, 3, func(cpu *CPU) {cpu.CallFunctionConditional(&cpu.Reg.F.carry, false)}},
-	&Instruction{0xD5, "PUSH DE", 0, 4, func(cpu *CPU) {cpu.PushRegPairOntoSP(&cpu.Reg.D, &cpu.Reg.E)}},
-	&Instruction{0xD6, "SUB d8", 1, 2, func(cpu *CPU) {cpu.Sub8BitDataFromRegA()}},
-	&Instruction{0xD7, "RST 2", 0, 4, func(cpu *CPU) {cpu.Restart(0x10)}},
-	&Instruction{0xD8, "RET C", 0, 2, func(cpu *CPU) {cpu.ReturnConditional(&cpu.Reg.F.carry, true)}},
-	&Instruction{0xD9, "RETI", 0, 4, func(cpu *CPU) {cpu.ReturnFromFuncInterrupt()}},
-	&Instruction{0xDA, "JP C, a16", 2, 3, func(cpu *CPU) {cpu.JumpConditional16Bit(&cpu.Reg.F.carry, true)}},
+	&Instruction{0xD4, "CALL NC, a16", 2, 3, func(cpu *CPU) { cpu.CallFunctionConditional(&cpu.Reg.F.carry, false) }},
+	&Instruction{0xD5, "PUSH DE", 0, 4, func(cpu *CPU) { cpu.PushRegPairOntoSP(&cpu.Reg.D, &cpu.Reg.E) }},
+	&Instruction{0xD6, "SUB d8", 1, 2, func(cpu *CPU) { cpu.Sub8BitDataFromRegA() }},
+	&Instruction{0xD7, "RST 2", 0, 4, func(cpu *CPU) { cpu.Restart(0x10) }},
+	&Instruction{0xD8, "RET C", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.carry, true) }},
+	&Instruction{0xD9, "RETI", 0, 4, func(cpu *CPU) { cpu.ReturnFromFuncInterrupt() }},
+	&Instruction{0xDA, "JP C, a16", 2, 3, func(cpu *CPU) { cpu.JumpConditional16Bit(&cpu.Reg.F.carry, true) }},
 	&unkownInstruction,
-	&Instruction{0xDC, "CALL C, a16", 2, 3, func(cpu *CPU) {cpu.CallFunctionConditional(&cpu.Reg.F.carry, true)}},
+	&Instruction{0xDC, "CALL C, a16", 2, 3, func(cpu *CPU) { cpu.CallFunctionConditional(&cpu.Reg.F.carry, true) }},
 	&unkownInstruction,
-	&Instruction{0xDE, "SBC A, d8", 1, 2, func(cpu *CPU) {cpu.Sub8BitRegFromRegAWithCarry(&cpu.CurrentInstruction.Operands[0])}}, // TODO - check
-	&Instruction{0xDF, "RST 3", 0, 4, func(cpu *CPU) {cpu.Restart(0x18)}},
-	&Instruction{0xE0, "LD (a8), A", 1, 3, func(cpu *CPU) {cpu.LoadRegAIntoInternalRam()}},
-	&Instruction{0xE1, "POP HL", 0, 3, func(cpu *CPU) {cpu.PopSPIntoRegPair(cpu.Reg.HLByte())}}, // TODO - check
-	&Instruction{0xE2, "LD (C), A", 0, 2, func(cpu *CPU) {cpu.LoadRegAIntoRegCInternalRam()}},
-	&unkownInstruction,
-	&unkownInstruction,
-	&Instruction{0xE5, "PUSH HL", 0, 4, func(cpu *CPU) {cpu.PushRegPairOntoSP(&cpu.Reg.H, &cpu.Reg.L)}},
-	&Instruction{0xE6, "AND d8", 1, 2, func(cpu *CPU) {cpu.AndRegAWithReg(&cpu.CurrentInstruction.Operands[0])}}, //TODO - check
-	&Instruction{0xE7, "RST 4", 0, 4, func(cpu *CPU) {cpu.Restart(0x20)}},
-	&Instruction{0xE8, "ADD SP, s8", 1, 4, func(cpu *CPU) {cpu.Add8BitDataToSP()}},
-	&Instruction{0xE9, "JP HL", 0, 1, func(cpu *CPU) {cpu.JumpToHLReg()}},
-	&Instruction{0xEA, "LD (a16), A", 2, 4, func(cpu *CPU) {cpu.LoadRegAIntoInternalRamData()}},
+	&Instruction{0xDE, "SBC A, d8", 1, 2, func(cpu *CPU) { cpu.Sub8BitRegFromRegAWithCarry(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
+	&Instruction{0xDF, "RST 3", 0, 4, func(cpu *CPU) { cpu.Restart(0x18) }},
+	&Instruction{0xE0, "LD (a8), A", 1, 3, func(cpu *CPU) { cpu.LoadRegAIntoInternalRam() }},
+	&Instruction{0xE1, "POP HL", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(cpu.Reg.HLByte()) }}, // TODO - check
+	&Instruction{0xE2, "LD (C), A", 0, 2, func(cpu *CPU) { cpu.LoadRegAIntoRegCInternalRam() }},
 	&unkownInstruction,
 	&unkownInstruction,
+	&Instruction{0xE5, "PUSH HL", 0, 4, func(cpu *CPU) { cpu.PushRegPairOntoSP(&cpu.Reg.H, &cpu.Reg.L) }},
+	&Instruction{0xE6, "AND d8", 1, 2, func(cpu *CPU) { cpu.AndRegAWithReg(&cpu.CurrentInstruction.Operands[0]) }}, //TODO - check
+	&Instruction{0xE7, "RST 4", 0, 4, func(cpu *CPU) { cpu.Restart(0x20) }},
+	&Instruction{0xE8, "ADD SP, s8", 1, 4, func(cpu *CPU) { cpu.Add8BitDataToSP() }},
+	&Instruction{0xE9, "JP HL", 0, 1, func(cpu *CPU) { cpu.JumpToHLReg() }},
+	&Instruction{0xEA, "LD (a16), A", 2, 4, func(cpu *CPU) { cpu.LoadRegAIntoInternalRamData() }},
 	&unkownInstruction,
-	&Instruction{0xEE, "XOR d8", 1, 2, func(cpu *CPU) {cpu.XorRegAWithReg(&cpu.CurrentInstruction.Operands[0])}}, // TODO - check
-	&Instruction{0xEF, "RST 5", 0, 4, func(cpu *CPU) {cpu.Restart(0x28)}},
-	&Instruction{0xF0, "LD A, (a8)", 1, 3, func(cpu *CPU) {cpu.LoadInternalRamDataIntoRegA()}},
-	&Instruction{0xF1, "POP AF", 0, 3, func(cpu *CPU) {cpu.PopSPIntoAFRegPair()}},
-	&Instruction{0xF2, "LD A, (C)", 0, 2, func(cpu *CPU) {cpu.LoadRegCInteralRamIntoRegA()}},
-	&Instruction{0xF3, "DI", 0, 1, func(cpu *CPU) {cpu.DisableInterrupts()}},
-	&Instruction{0xF4, "PUSH AF", 0, 4, func(cpu *CPU) {cpu.PushAFRegOntoSP()}},
-	&Instruction{0xF5, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF6, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF7, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF8, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xF9, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFA, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFB, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFC, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFD, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFE, "", 0, 0, func(cpu *CPU) {}},
-	&Instruction{0xFF, "", 0, 0, func(cpu *CPU) {}},
+	&unkownInstruction,
+	&unkownInstruction,
+	&Instruction{0xEE, "XOR d8", 1, 2, func(cpu *CPU) { cpu.XorRegAWithReg(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
+	&Instruction{0xEF, "RST 5", 0, 4, func(cpu *CPU) { cpu.Restart(0x28) }},
+	&Instruction{0xF0, "LD A, (a8)", 1, 3, func(cpu *CPU) { cpu.LoadInternalRamDataIntoRegA() }},
+	&Instruction{0xF1, "POP AF", 0, 3, func(cpu *CPU) { cpu.PopSPIntoAFRegPair() }},
+	&Instruction{0xF2, "LD A, (C)", 0, 2, func(cpu *CPU) { cpu.LoadRegCInteralRamIntoRegA() }},
+	&Instruction{0xF3, "DI", 0, 1, func(cpu *CPU) { cpu.DisableInterrupts() }},
+	&unkownInstruction,
+	&Instruction{0xF5, "PUSH AF", 0, 4, func(cpu *CPU) { cpu.PushAFRegOntoSP() }},
+	&Instruction{0xF6, "OR d8", 1, 2, func(cpu *CPU) { cpu.OrRegAWithReg(&cpu.CurrentInstruction.Operands[0]) }},
+	&Instruction{0xF7, "RST 6", 0, 4, func(cpu *CPU) { cpu.Restart(0x30) }},
+	&Instruction{0xF8, "LD HL, SP+s8", 1, 3, func(cpu *CPU) { cpu.Add8BitDataToSPIntoHLReg() }},
+	&Instruction{0xF9, "LD SP, HL", 0, 2, func(cpu *CPU) { cpu.LoadHLRegIntoSP() }},
+	&Instruction{0xFA, "LD A, (a16)", 2, 4, func(cpu *CPU) { cpu.Load16BitDataIntoRegA() }},
+	&Instruction{0xFB, "EI", 0, 1, func(cpu *CPU) { cpu.EnableInterrupts() }},
+	&unkownInstruction,
+	&unkownInstruction,
+	&Instruction{0xFE, "CP d8", 1, 2, func(cpu *CPU) { cpu.CompareRegAWithReg(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
+	&Instruction{0xFF, "RST 7", 0, 4, func(cpu *CPU) { cpu.Restart(0x38) }},
+}
+
+var InstructionsPrefixed []*Instruction = []*Instruction{
+	&Instruction{0x00, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x01, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x02, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x03, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x04, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x05, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x06, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x07, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x08, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x09, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x0F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x10, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x11, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x12, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x13, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x14, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x15, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x16, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x17, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x18, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x19, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x1F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x20, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x21, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x22, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x23, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x24, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x25, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x26, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x27, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x28, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x29, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x2F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x30, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x31, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x32, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x33, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x34, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x35, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x36, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x37, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x38, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x39, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x3F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x40, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x41, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x42, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x43, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x44, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x45, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x46, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x47, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x48, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x49, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x4F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x50, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x51, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x52, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x53, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x54, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x55, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x56, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x57, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x58, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x59, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x5F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x60, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x61, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x62, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x63, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x64, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x65, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x66, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x67, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x68, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x69, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x6F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x70, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x71, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x72, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x73, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x74, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x75, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x76, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x77, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x78, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x79, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x7F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x80, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x81, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x82, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x83, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x84, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x85, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x86, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x87, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x88, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x89, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x8F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x90, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x91, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x92, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x93, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x94, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x95, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x96, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x97, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x98, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x99, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9A, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9B, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9C, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9D, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9E, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x9F, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xA9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAD, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xAF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xB9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBD, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xBF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xC9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCD, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xCF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xD9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDD, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xDF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xE9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xEA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xEB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xEC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xED, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xEE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xEF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF0, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF1, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF2, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF3, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF4, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF5, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF6, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF7, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF8, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xF9, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFA, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFB, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFC, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFD, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFE, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0xFF, "", 0, 0, func(cpu *CPU){}},
 }
