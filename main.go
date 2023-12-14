@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"github.com/TheOrnyx/gameboy-golor/window"
 )
 
 const UsingSDL = true
@@ -16,7 +17,7 @@ var FatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
 
 func main() {
 	InfoLog.Println("Starting...")
-	gameScreen := MakeNewScreen()
-	StartSDLWindowSystem(gameScreen, WinWidth, WinHeight)
+	window.StartSDLWindowSystem(WinWidth, WinHeight)
+	
 	InfoLog.Println("Program finished, exiting...")
 }
