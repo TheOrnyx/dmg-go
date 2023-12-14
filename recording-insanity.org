@@ -56,3 +56,17 @@ it now
 Now I just need to continue implementing the MBC's and connecting
 everything together (as well as you know, actually do the prefixed
 instructions for the CPU)
+
+* <2023-12-14 Thu>Day Six
+Today was.... a day. I spent about like 3 hours trying to google how
+the hell to implement the timer before going to the emudev discord
+where some much smarter people than me helped. So now it's kinda
+implemented, needs a couple tweaks and testing but hey, it's there.
+
+I also managed to start implementing the interrupts properly, it's
+pretty basic at the moment and still needs a bit done but it's a start.
+
+I also worked on some more of the prefixed instructions as that's like
+one thing I should really finish. Shouldn't take that long however as
+most of the sections are set up pretty similar so it's pretty easy to
+copy and paste sections and just like change a word
