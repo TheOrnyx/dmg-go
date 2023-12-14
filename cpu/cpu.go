@@ -7,10 +7,22 @@ import (
 	"github.com/TheOrnyx/gameboy-golor/mmu"
 )
 
+/////////////
+// TODO's  //
+/////////////
+//
+// TODO - add like ticks and stuff
+// TODO - finish the prefixed CPU instructions
+
 var infoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
 var debugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
 var warnLog = log.New(os.Stdout, "[WARN] ", log.LstdFlags)
 var fatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
+
+const ( // the interrupt addresses
+	granularIEAddr = 0xFFFF
+	interruptFlagAddr = 0xFF0F
+)
 
 // CurrentInstruction struct to hold information about the current instruction
 type CurrentInstruction struct {
@@ -83,7 +95,8 @@ func (cpu *CPU) SetFlag(flag int, state bool)  {
 
 // Step the step function for the cpu
 func (cpu *CPU) Step() int {
-	if !cpu.Halted {	
+	if !cpu.Halted {
+		cpu.checkInterrupts()
 		opCode := cpu.ReadByte(cpu.PC)
 		cpu.PC++
 		
@@ -101,6 +114,54 @@ func (cpu *CPU) Step() int {
 	}
 	
 	return 0
+}
+
+// checkInterrupts check for interrupts and return true if should interrupt
+func (cpu *CPU) checkInterrupts() bool {
+	if !cpu.InterruptsEnabled {
+		return false
+	}
+
+	ie := cpu.ReadByte(granularIEAddr)
+	iFlag := cpu.ReadByte(interruptFlagAddr)
+	interrupt := ie & iFlag // and the two together to find interrupts that are both enabled and pending
+	
+	switch {
+	case interrupt & 0x01 == 0x01: // VBlank interrupt
+		cpu.WriteByteToAddr(interruptFlagAddr, iFlag & 0xFE) // turn off the interrupt request bit and write
+		cpu.InterruptsEnabled = false
+		cpu.pushSP(cpu.PC)
+		cpu.PC = 0x0040
+		return true
+	case interrupt & 0x02 == 0x02: // LCD interrupt
+		cpu.WriteByteToAddr(interruptFlagAddr, iFlag & 0xFD) // turn off interrupt req and write
+		cpu.InterruptsEnabled = false
+		cpu.pushSP(cpu.PC)
+		cpu.PC = 0x0048
+		return true
+	case interrupt & 0x03 == 0x03: // Timer overflow interrupt
+		cpu.WriteByteToAddr(interruptFlagAddr, iFlag & 0xFB)
+		cpu.InterruptsEnabled = false
+		cpu.pushSP(cpu.PC)
+		cpu.PC = 0x0050
+		return true
+	case interrupt & 0x04 == 0x04: // serial link interrupt
+		cpu.WriteByteToAddr(interruptFlagAddr, iFlag & 0xF7) // NOTE - check that 0xF7 is the right hex value to and
+		cpu.InterruptsEnabled = false
+		cpu.pushSP(cpu.PC)
+		cpu.PC = 0x0058
+		return true
+	case interrupt & 0x05 == 0x05: // joypad interrupt
+		cpu.WriteByteToAddr(interruptFlagAddr, iFlag & 0xEF)
+		cpu.InterruptsEnabled = false
+		cpu.pushSP(cpu.PC)
+		cpu.PC = 0x0060
+		return true
+	default:
+		infoLog.Printf("Unkown interrupt with interrupt %v\n", interrupt)
+	}
+	
+	return false
 }
 
 // IncrementPC increment the PC by amnt
