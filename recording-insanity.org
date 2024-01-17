@@ -70,3 +70,13 @@ I also worked on some more of the prefixed instructions as that's like
 one thing I should really finish. Shouldn't take that long however as
 most of the sections are set up pretty similar so it's pretty easy to
 copy and paste sections and just like change a word
+
+* <2024-01-17 Wed>Day Seven
+It's been..... a very long time since I did work on this, about like a
+month. But uni was closed over christmas and new year so couldn't go in and I've
+had work etc etc blah blah blah whatever.
+
+Anyway today I finished the CPU instructions and am currently in the process of
+"debugging" by which I mean "wondering why nothing is working and working
+backwards to fix it" but all seems to be going fine, I'm also just gonna make a
+debugger to test my stuff
