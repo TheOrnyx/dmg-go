@@ -927,6 +927,46 @@ func (cpu *CPU) ShiftRightHLData()  {
 	cpu.WriteByteToAddr(cpu.Reg.HL(), outcome)
 }
 
+// ShiftRightRegLogical Shift reg r right with a logical shift
+// bit7 gets reset to 0
+func (cpu *CPU) ShiftRightRegLogical(r *byte)  {
+	var bit0 bool
+
+	if *r & 0x01 == 0x01 {
+		bit0 = true
+	}
+
+
+	outcome := *r >> 1 // TODO - check
+
+	cpu.SetFlag(Z, outcome == 0)
+	cpu.SetFlag(C, bit0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+	
+	*r = outcome
+}
+
+// ShiftRightHLDataLogical shift the data pointed to by the HL reg right with a logical shift
+func (cpu *CPU) ShiftRightHLDataLogical()  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+	var bit0 bool
+
+	if data & 0x01 == 0x01 {
+		bit0 = true
+	}
+
+
+	outcome := data >> 1
+
+	cpu.SetFlag(Z, outcome == 0)
+	cpu.SetFlag(C, bit0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+	
+	cpu.WriteByteToAddr(cpu.Reg.HL(), outcome)
+}
+
 
 //// MISC FUNCTIONS /////
 
@@ -1075,6 +1115,62 @@ func (cpu *CPU) SwapReg(r *byte)  {
 	cpu.ResetFlag(C)
 
 	*r = result
+}
+
+// SwapHLData swap the nibbles around in the data stored in the HL Reg and write
+func (cpu *CPU) SwapHLData()  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+
+	btm := data & 0x0F // the bottom 4 bits
+	top := data & 0xF0 // the top 4 bis
+
+	result := (btm << 4) | (top >> 4)
+
+	cpu.SetFlag(Z, result == 0)
+	cpu.ResetFlag(N)
+	cpu.ResetFlag(H)
+	cpu.ResetFlag(C)
+
+	cpu.WriteByteToAddr(cpu.Reg.HL(), data) // TODO - CHECK THIS
+}
+
+// BitTestReg test bit in specified position in reg r
+func (cpu *CPU) BitTestReg(bit byte, r *byte)  {
+	cpu.SetFlag(Z, *r >> bit & 1 == 0)
+	cpu.SetFlag(H, true)
+	cpu.ResetFlag(N)
+}
+
+// BitTestHLData test bit in specified position in HL data
+func (cpu *CPU) BitTestHLData(bit byte)  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+	cpu.BitTestReg(bit, &data) /// NOTE - maybe not best to do this and should just rewrite
+}
+
+// BitResetReg reset specified bit in reg r to 0
+func (cpu *CPU) BitResetReg(bit byte, r *byte)  {
+	result := *r & ^(1 << bit)
+	*r = result
+}
+
+// BitResetHLData Reset specified bit in HL Data to 0 and write
+func (cpu *CPU) BitResetHLData(bit byte)  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+	result := data & ^(1 << bit)
+	cpu.WriteByteToAddr(cpu.Reg.HL(), result)
+}
+
+// BitSetReg set specified bit in reg r to 1
+func (cpu *CPU) BitSetReg(bit byte, r *byte)  {
+	result := *r | (1 << bit)
+	*r = result
+}
+
+// BitSetHLData set specified bit in HL Data to 1
+func (cpu *CPU) BitSetHLData(bit byte)  {
+	data := cpu.ReadByte(cpu.Reg.HL())
+	result := data | (1 << bit)
+	cpu.WriteByteToAddr(cpu.Reg.HL(), result)
 }
 
 //// INSTRUCTIONS /////
@@ -1421,212 +1517,237 @@ var InstructionsPrefixed []*Instruction = []*Instruction{
 	&Instruction{0x2E, "SRA (HL)", 0, 4, func(cpu *CPU){cpu.ShiftRightHLData()}},    
 	&Instruction{0x2F, "SRA A", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.A)}},
 	
-	&Instruction{0x30, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x31, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x32, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x33, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x34, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x35, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x36, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x37, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x38, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x39, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x3F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x40, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x41, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x42, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x43, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x44, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x45, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x46, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x47, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x48, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x49, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x4F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x50, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x51, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x52, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x53, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x54, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x55, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x56, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x57, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x58, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x59, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x5F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x60, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x61, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x62, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x63, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x64, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x65, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x66, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x67, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x68, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x69, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x6F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x70, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x71, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x72, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x73, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x74, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x75, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x76, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x77, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x78, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x79, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x7F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x80, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x81, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x82, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x83, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x84, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x85, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x86, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x87, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x88, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x89, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x8F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x90, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x91, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x92, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x93, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x94, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x95, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x96, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x97, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x98, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x99, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9A, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9B, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9C, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9D, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9E, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0x9F, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xA9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAD, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xAF, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xB9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBD, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xBF, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xC9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCD, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xCF, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xD9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDD, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xDF, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xE9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xEA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xEB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xEC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xED, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xEE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xEF, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF0, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF1, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF2, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF3, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF4, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF5, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF6, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF7, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF8, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xF9, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFA, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFB, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFC, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFD, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFE, "", 0, 0, func(cpu *CPU){}},
-	&Instruction{0xFF, "", 0, 0, func(cpu *CPU){}},
+	&Instruction{0x30, "SWAP B", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.B)}},
+	&Instruction{0x31, "SWAP C", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.C)}},
+	&Instruction{0x32, "SWAP D", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.D)}},
+	&Instruction{0x33, "SWAP E", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.E)}},
+	&Instruction{0x34, "SWAP H", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.H)}},
+	&Instruction{0x35, "SWAP L", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.L)}},
+	&Instruction{0x36, "SWAP (HL)", 0, 4, func(cpu *CPU){cpu.SwapHLData()}},    
+	&Instruction{0x37, "SWAP A", 0, 2, func(cpu *CPU){cpu.SwapReg(&cpu.Reg.A)}},
+	
+	&Instruction{0x38, "SRA B", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.B)}},
+	&Instruction{0x39, "SRA C", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.C)}},
+	&Instruction{0x3A, "SRA D", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.D)}},
+	&Instruction{0x3B, "SRA E", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.E)}},
+	&Instruction{0x3C, "SRA H", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.H)}},
+	&Instruction{0x3D, "SRA L", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.L)}},
+	&Instruction{0x3E, "SRA (HL)", 0, 4, func(cpu *CPU){cpu.ShiftRightHLData()}},    
+	&Instruction{0x3F, "SRA A", 0, 2, func(cpu *CPU){cpu.ShiftRightReg(&cpu.Reg.A)}},
+	
+	&Instruction{0x40, "BIT 0, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.B)}},
+	&Instruction{0x41, "BIT 0, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.C)}},
+	&Instruction{0x42, "BIT 0, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.D)}},
+	&Instruction{0x43, "BIT 0, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.E)}},
+	&Instruction{0x44, "BIT 0, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.H)}},
+	&Instruction{0x45, "BIT 0, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.L)}},
+	&Instruction{0x46, "BIT 0, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(0)}},
+	&Instruction{0x47, "BIT 0, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(0, &cpu.Reg.A)}},
+	
+	&Instruction{0x48, "BIT 1, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.B)}},
+	&Instruction{0x49, "BIT 1, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.C)}},
+	&Instruction{0x4A, "BIT 1, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.D)}},
+	&Instruction{0x4B, "BIT 1, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.E)}},
+	&Instruction{0x4C, "BIT 1, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.H)}},
+	&Instruction{0x4D, "BIT 1, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.L)}},
+	&Instruction{0x4E, "BIT 1, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(1)}},      
+	&Instruction{0x4F, "BIT 1, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(1, &cpu.Reg.A)}},
+	
+	&Instruction{0x50, "BIT 2, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.B)}},
+	&Instruction{0x51, "BIT 2, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.C)}},
+	&Instruction{0x52, "BIT 2, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.D)}},
+	&Instruction{0x53, "BIT 2, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.E)}},
+	&Instruction{0x54, "BIT 2, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.H)}},
+	&Instruction{0x55, "BIT 2, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.L)}},
+	&Instruction{0x56, "BIT 2, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(2)}},      
+	&Instruction{0x57, "BIT 2, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(2, &cpu.Reg.A)}},
+	
+	&Instruction{0x58, "BIT 3, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.B)}},
+	&Instruction{0x59, "BIT 3, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.C)}},
+	&Instruction{0x5A, "BIT 3, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.D)}},
+	&Instruction{0x5B, "BIT 3, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.E)}},
+	&Instruction{0x5C, "BIT 3, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.H)}},
+	&Instruction{0x5D, "BIT 3, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.L)}},
+	&Instruction{0x5E, "BIT 3, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(3)}},      
+	&Instruction{0x5F, "BIT 3, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(3, &cpu.Reg.A)}},
+	
+	&Instruction{0x60, "BIT 4, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.B)}},
+	&Instruction{0x61, "BIT 4, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.C)}},
+	&Instruction{0x62, "BIT 4, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.D)}},
+	&Instruction{0x63, "BIT 4, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.E)}},
+	&Instruction{0x64, "BIT 4, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.H)}},
+	&Instruction{0x65, "BIT 4, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.L)}},
+	&Instruction{0x66, "BIT 4, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(4)}},      
+	&Instruction{0x67, "BIT 4, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(4, &cpu.Reg.A)}},
+	
+	&Instruction{0x68, "BIT 5, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.B)}},
+	&Instruction{0x69, "BIT 5, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.C)}},
+	&Instruction{0x6A, "BIT 5, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.D)}},
+	&Instruction{0x6B, "BIT 5, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.E)}},
+	&Instruction{0x6C, "BIT 5, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.H)}},
+	&Instruction{0x6D, "BIT 5, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.L)}},
+	&Instruction{0x6E, "BIT 5, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(5)}},      
+	&Instruction{0x6F, "BIT 5, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(5, &cpu.Reg.A)}},
+	
+	&Instruction{0x70, "BIT 6, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.B)}},
+	&Instruction{0x71, "BIT 6, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.C)}},
+	&Instruction{0x72, "BIT 6, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.D)}},
+	&Instruction{0x73, "BIT 6, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.E)}},
+	&Instruction{0x74, "BIT 6, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.H)}},
+	&Instruction{0x75, "BIT 6, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.L)}},
+	&Instruction{0x76, "BIT 6, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(6)}},      
+	&Instruction{0x77, "BIT 6, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(6, &cpu.Reg.A)}},
+	
+	&Instruction{0x78, "BIT 7, B", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.B)}},
+	&Instruction{0x79, "BIT 7, C", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.C)}},
+	&Instruction{0x7A, "BIT 7, D", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.D)}},
+	&Instruction{0x7B, "BIT 7, E", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.E)}},
+	&Instruction{0x7C, "BIT 7, H", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.H)}},
+	&Instruction{0x7D, "BIT 7, L", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.L)}},
+	&Instruction{0x7E, "BIT 7, (HL)", 0, 3, func(cpu *CPU){cpu.BitTestHLData(7)}},      
+	&Instruction{0x7F, "BIT 7, A", 0, 2, func(cpu *CPU){cpu.BitTestReg(7, &cpu.Reg.A)}},
+	
+	&Instruction{0x80, "RES 0, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.B)}},
+	&Instruction{0x81, "RES 0, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.C)}},
+	&Instruction{0x82, "RES 0, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.D)}},
+	&Instruction{0x83, "RES 0, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.E)}},
+	&Instruction{0x84, "RES 0, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.H)}},
+	&Instruction{0x85, "RES 0, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.L)}},
+	&Instruction{0x86, "RES 0, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(0)}},      
+	&Instruction{0x87, "RES 0, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(0, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0x88, "RES 1, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.B)}},
+	&Instruction{0x89, "RES 1, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.C)}},
+	&Instruction{0x8A, "RES 1, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.D)}},
+	&Instruction{0x8B, "RES 1, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.E)}},
+	&Instruction{0x8C, "RES 1, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.H)}},
+	&Instruction{0x8D, "RES 1, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.L)}},
+	&Instruction{0x8E, "RES 1, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(1)}},      
+	&Instruction{0x8F, "RES 1, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(1, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0x90, "RES 2, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.B)}},
+	&Instruction{0x91, "RES 2, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.C)}},
+	&Instruction{0x92, "RES 2, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.D)}},
+	&Instruction{0x93, "RES 2, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.E)}},
+	&Instruction{0x94, "RES 2, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.H)}},
+	&Instruction{0x95, "RES 2, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.L)}},
+	&Instruction{0x96, "RES 2, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(2)}},      
+	&Instruction{0x97, "RES 2, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(2, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0x98, "RES 3, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.B)}},
+	&Instruction{0x99, "RES 3, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.C)}},
+	&Instruction{0x9A, "RES 3, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.D)}},
+	&Instruction{0x9B, "RES 3, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.E)}},
+	&Instruction{0x9C, "RES 3, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.H)}},
+	&Instruction{0x9D, "RES 3, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.L)}},
+	&Instruction{0x9E, "RES 3, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(3)}},      
+	&Instruction{0x9F, "RES 3, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(3, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0xA0, "RES 4, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.B)}},
+	&Instruction{0xA1, "RES 4, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.C)}},
+	&Instruction{0xA2, "RES 4, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.D)}},
+	&Instruction{0xA3, "RES 4, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.E)}},
+	&Instruction{0xA4, "RES 4, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.H)}},
+	&Instruction{0xA5, "RES 4, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.L)}},
+	&Instruction{0xA6, "RES 4, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(4)}},      
+	&Instruction{0xA7, "RES 4, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(4, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0xA8, "RES 5, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.B)}},
+	&Instruction{0xA9, "RES 5, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.C)}},
+	&Instruction{0xAA, "RES 5, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.D)}},
+	&Instruction{0xAB, "RES 5, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.E)}},
+	&Instruction{0xAC, "RES 5, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.H)}},
+	&Instruction{0xAD, "RES 5, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.L)}},
+	&Instruction{0xAE, "RES 5, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(5)}},      
+	&Instruction{0xAF, "RES 5, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(5, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0xB0, "RES 6, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.B)}},
+	&Instruction{0xB1, "RES 6, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.C)}},
+	&Instruction{0xB2, "RES 6, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.D)}},
+	&Instruction{0xB3, "RES 6, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.E)}},
+	&Instruction{0xB4, "RES 6, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.H)}},
+	&Instruction{0xB5, "RES 6, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.L)}},
+	&Instruction{0xB6, "RES 6, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(6)}},      
+	&Instruction{0xB7, "RES 6, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(6, &cpu.Reg.A)}},
+					                                                                 
+	&Instruction{0xB8, "RES 7, B", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.B)}},
+	&Instruction{0xB9, "RES 7, C", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.C)}},
+	&Instruction{0xBA, "RES 7, D", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.D)}},
+	&Instruction{0xBB, "RES 7, E", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.E)}},
+	&Instruction{0xBC, "RES 7, H", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.H)}},
+	&Instruction{0xBD, "RES 7, L", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.L)}},
+	&Instruction{0xBE, "RES 7, (HL)", 0, 4, func(cpu *CPU){cpu.BitResetHLData(7)}},      
+	&Instruction{0xBF, "RES 7, A", 0, 2, func(cpu *CPU){cpu.BitResetReg(7, &cpu.Reg.A)}},
+	
+	&Instruction{0xC0, "SET 0, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.B)}},
+	&Instruction{0xC1, "SET 0, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.C)}},
+	&Instruction{0xC2, "SET 0, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.D)}},
+	&Instruction{0xC3, "SET 0, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.E)}},
+	&Instruction{0xC4, "SET 0, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.H)}},
+	&Instruction{0xC5, "SET 0, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.L)}},
+	&Instruction{0xC6, "SET 0, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(0)}},      
+	&Instruction{0xC7, "SET 0, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(0, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xC8, "SET 1, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.B)}},
+	&Instruction{0xC9, "SET 1, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.C)}},
+	&Instruction{0xCA, "SET 1, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.D)}},
+	&Instruction{0xCB, "SET 1, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.E)}},
+	&Instruction{0xCC, "SET 1, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.H)}},
+	&Instruction{0xCD, "SET 1, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.L)}},
+	&Instruction{0xCE, "SET 1, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(1)}},      
+	&Instruction{0xCF, "SET 1, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(1, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xD0, "SET 2, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.B)}},
+	&Instruction{0xD1, "SET 2, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.C)}},
+	&Instruction{0xD2, "SET 2, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.D)}},
+	&Instruction{0xD3, "SET 2, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.E)}},
+	&Instruction{0xD4, "SET 2, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.H)}},
+	&Instruction{0xD5, "SET 2, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.L)}},
+	&Instruction{0xD6, "SET 2, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(2)}},      
+	&Instruction{0xD7, "SET 2, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(2, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xD8, "SET 3, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.B)}},
+	&Instruction{0xD9, "SET 3, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.C)}},
+	&Instruction{0xDA, "SET 3, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.D)}},
+	&Instruction{0xDB, "SET 3, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.E)}},
+	&Instruction{0xDC, "SET 3, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.H)}},
+	&Instruction{0xDD, "SET 3, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.L)}},
+	&Instruction{0xDE, "SET 3, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(3)}},      
+	&Instruction{0xDF, "SET 3, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(3, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xE0, "SET 4, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.B)}},
+	&Instruction{0xE1, "SET 4, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.C)}},
+	&Instruction{0xE2, "SET 4, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.D)}},
+	&Instruction{0xE3, "SET 4, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.E)}},
+	&Instruction{0xE4, "SET 4, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.H)}},
+	&Instruction{0xE5, "SET 4, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.L)}},
+	&Instruction{0xE6, "SET 4, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(4)}},      
+	&Instruction{0xE7, "SET 4, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(4, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xE8, "SET 5, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.B)}},
+	&Instruction{0xE9, "SET 5, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.C)}},
+	&Instruction{0xEA, "SET 5, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.D)}},
+	&Instruction{0xEB, "SET 5, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.E)}},
+	&Instruction{0xEC, "SET 5, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.H)}},
+	&Instruction{0xED, "SET 5, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.L)}},
+	&Instruction{0xEE, "SET 5, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(5)}},      
+	&Instruction{0xEF, "SET 5, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(5, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xF0, "SET 6, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.B)}},
+	&Instruction{0xF1, "SET 6, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.C)}},
+	&Instruction{0xF2, "SET 6, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.D)}},
+	&Instruction{0xF3, "SET 6, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.E)}},
+	&Instruction{0xF4, "SET 6, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.H)}},
+	&Instruction{0xF5, "SET 6, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.L)}},
+	&Instruction{0xF6, "SET 6, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(6)}},      
+	&Instruction{0xF7, "SET 6, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(6, &cpu.Reg.A)}},
+					                                                                     
+	&Instruction{0xF8, "SET 7, B", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.B)}},
+	&Instruction{0xF9, "SET 7, C", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.C)}},
+	&Instruction{0xFA, "SET 7, D", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.D)}},
+	&Instruction{0xFB, "SET 7, E", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.E)}},
+	&Instruction{0xFC, "SET 7, H", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.H)}},
+	&Instruction{0xFD, "SET 7, L", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.L)}},
+	&Instruction{0xFE, "SET 7, (HL)", 0, 4, func(cpu *CPU){cpu.BitSetHLData(7)}},      
+	&Instruction{0xFF, "SET 7, A", 0, 2, func(cpu *CPU){cpu.BitSetReg(7, &cpu.Reg.A)}},
 }

@@ -1,5 +1,7 @@
 package cpu
 
+import "fmt"
+
 // Constants for the register flags positions
 const (
 	ZeroFlagBytePos      uint8 = 7
@@ -55,6 +57,11 @@ type Registers struct {
 	F FlagsRegister
 	H uint8
 	L uint8
+}
+
+// String register string
+func (r *Registers) String() string {
+	return fmt.Sprintf("A:%v F:%v B:%v C:%v D:%v E:%v H:%v L:%v", r.A, r.F.toByte(), r.B, r.C, r.D, r.E, r.H, r.L)
 }
 
 // HL return the address of the HL register pair

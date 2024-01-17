@@ -1,10 +1,12 @@
 package cpu
 
 import (
+	"fmt"
 	"log"
 	"os"
 
 	"github.com/TheOrnyx/gameboy-golor/mmu"
+	"github.com/TheOrnyx/gameboy-golor/timer"
 )
 
 /////////////
@@ -36,10 +38,29 @@ type CPU struct {
 	PC uint16 // program counter
 	SP uint16 // Stack pointer
 	CurrentInstruction *CurrentInstruction //the current instruction to be run
-	MMU mmu.MMU
+	MMU *mmu.MMU // the memory mapped unit 
 	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
 	InterruptsEnabled bool // bool for whether or not the interrupt flag has been enabled
 	Halted bool // whether or not the CPU is halted
+	Timer timer.Timer
+}
+
+// String print cpu
+func (cpu *CPU) String() string {
+	pc := cpu.MMU.ReadByte(cpu.PC)
+	pcOne := cpu.MMU.ReadByte(cpu.PC+1)
+	pcTwo := cpu.MMU.ReadByte(cpu.PC+2)
+	pcThree := cpu.MMU.ReadByte(cpu.PC+3)
+	return fmt.Sprintf("%v SP:%v PC:%v PCMEM:%v,%v,%v,%v", cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
+}
+
+// NewCPU create and return a new cpu
+func NewCPU(mmu *mmu.MMU) (*CPU, error) {
+	newCPU := new(CPU)
+	newCPU.MMU = mmu
+	newCPU.Reset()
+
+	return newCPU, nil
 }
 
 // Reset reset the cpu
@@ -50,9 +71,29 @@ func (cpu *CPU) Reset()  {
 	cpu.Reg.reset()
 	cpu.ResetAllFlags()
 	cpu.Halted = false
-	// cpu.InterruptEnabled = false
+	cpu.InterruptsEnabled = false
 	cpu.hasJumped = false
 	cpu.CurrentInstruction = &CurrentInstruction{Instruction: InstructionsUnprefixed[0x00], Operands: [2]byte{}}
+}
+
+// ResetDebug reset the cpu to debug position (basically skip the boot rom)
+func (cpu *CPU) ResetDebug()  {
+	cpu.Reg.A = 0x01
+
+	cpu.SetFlag(C, true)
+	cpu.SetFlag(H, true)
+	cpu.SetFlag(N, false)
+	cpu.SetFlag(Z, true)
+
+	cpu.Reg.B = 0x00
+	cpu.Reg.C = 0x13
+	cpu.Reg.D = 0x00
+	cpu.Reg.E = 0xD8
+	cpu.Reg.H = 0x01
+	cpu.Reg.L = 0x4D
+
+	cpu.SP = 0xFFFE
+	cpu.PC = 0x0100
 }
 
 
@@ -101,16 +142,23 @@ func (cpu *CPU) Step() int {
 		cpu.PC++
 		
 		if opCode == 0xCB { // use the prefixed instructions 
-			
+			newOpCode := cpu.ReadByte(cpu.PC)
+			// cpu.PC++
+			cpu.CompileInstruction(InstructionsPrefixed[newOpCode])
 		} else {
 			cpu.CompileInstruction(InstructionsUnprefixed[opCode])
 		}
 
 		cpu.CurrentInstruction.Instruction.ExecFun(cpu)
 
-		if true { // replace with some sort of jump check later
+		if cpu.hasJumped == false { // replace with some sort of jump check later
 			cpu.IncrementPC(len(cpu.CurrentInstruction.Operands)+1)
 		}
+		cpu.hasJumped = false
+		
+	} else {
+		// interruptFlagNow := cpu.ReadByte(0xFF0F)
+		cpu.Halted = false
 	}
 	
 	return 0
@@ -158,7 +206,7 @@ func (cpu *CPU) checkInterrupts() bool {
 		cpu.PC = 0x0060
 		return true
 	default:
-		infoLog.Printf("Unkown interrupt with interrupt %v\n", interrupt)
+		// infoLog.Printf("Unkown interrupt with interrupt %v\n", interrupt)
 	}
 	
 	return false
