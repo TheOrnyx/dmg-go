@@ -14,7 +14,6 @@ import (
 /////////////
 //
 // TODO - add like ticks and stuff
-// TODO - finish the prefixed CPU instructions
 
 var infoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
 var debugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
@@ -42,7 +41,9 @@ type CPU struct {
 	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
 	InterruptsEnabled bool // bool for whether or not the interrupt flag has been enabled
 	Halted bool // whether or not the CPU is halted
-	Timer timer.Timer
+	Timer timer.Timer // the cpu timer
+
+	instrCycles int // the current amount of M-cycles for the instruction
 }
 
 // String print cpu
@@ -51,7 +52,8 @@ func (cpu *CPU) String() string {
 	pcOne := cpu.MMU.ReadByte(cpu.PC+1)
 	pcTwo := cpu.MMU.ReadByte(cpu.PC+2)
 	pcThree := cpu.MMU.ReadByte(cpu.PC+3)
-	return fmt.Sprintf("%v SP:%v PC:%v PCMEM:%v,%v,%v,%v", cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
+	instructionInfo := fmt.Sprintf("Current Instruction: Code %v: Name %s", cpu.CurrentInstruction.Instruction.OpCode, cpu.CurrentInstruction.Instruction.Desc)
+	return fmt.Sprintf("%s\nCPU Values: %v SP:%v PC:%v PCMEM:%v,%v,%v,%v", instructionInfo, cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
 }
 
 // NewCPU create and return a new cpu
@@ -78,22 +80,29 @@ func (cpu *CPU) Reset()  {
 
 // ResetDebug reset the cpu to debug position (basically skip the boot rom)
 func (cpu *CPU) ResetDebug()  {
-	cpu.Reg.A = 0x01
+	cpu.Reg.A = 0x11
 
-	cpu.SetFlag(C, true)
-	cpu.SetFlag(H, true)
+	cpu.SetFlag(C, false)
+	cpu.SetFlag(H, false)
 	cpu.SetFlag(N, false)
 	cpu.SetFlag(Z, true)
 
 	cpu.Reg.B = 0x00
-	cpu.Reg.C = 0x13
-	cpu.Reg.D = 0x00
-	cpu.Reg.E = 0xD8
-	cpu.Reg.H = 0x01
-	cpu.Reg.L = 0x4D
+	cpu.Reg.C = 0x00
+	cpu.Reg.D = 0xFF
+	cpu.Reg.E = 0x56
+	cpu.Reg.H = 0x00
+	cpu.Reg.L = 0x0D
 
 	cpu.SP = 0xFFFE
 	cpu.PC = 0x0100
+}
+
+// loadOpCode read the current opcode for the PC and increment the PC
+func (cpu *CPU) loadOpCode() byte {
+	opcode := cpu.MMU.ReadByte(cpu.PC)
+	cpu.PC++
+	return opcode
 }
 
 
@@ -109,6 +118,16 @@ func (cpu *CPU) ResetFlag(flag int)  {
 	case C:
 		cpu.Reg.F.carry = false
 	}
+}
+
+// Tick tick the cpu by cycles amount of M-cycles
+func (cpu *CPU) Tick(cycles int)  {
+	cpu.Timer.Tick(cycles)
+}
+
+// RequestInterrupt request an interrupt with code
+func (cpu *CPU) RequestInterrupt(code byte)  {
+	
 }
 
 // ResetAllFlags resets all flags back to false
@@ -136,13 +155,13 @@ func (cpu *CPU) SetFlag(flag int, state bool)  {
 
 // Step the step function for the cpu
 func (cpu *CPU) Step() int {
+	cpu.instrCycles = 1
 	if !cpu.Halted {
 		cpu.checkInterrupts()
-		opCode := cpu.ReadByte(cpu.PC)
-		cpu.PC++
+		opCode := cpu.loadOpCode()
 		
-		if opCode == 0xCB { // use the prefixed instructions 
-			newOpCode := cpu.ReadByte(cpu.PC)
+		if opCode == 0xCB { // use the prefixed instructions
+			newOpCode := cpu.loadOpCode()
 			// cpu.PC++
 			cpu.CompileInstruction(InstructionsPrefixed[newOpCode])
 		} else {
@@ -150,17 +169,19 @@ func (cpu *CPU) Step() int {
 		}
 
 		cpu.CurrentInstruction.Instruction.ExecFun(cpu)
-
+		
 		if cpu.hasJumped == false { // replace with some sort of jump check later
-			cpu.IncrementPC(len(cpu.CurrentInstruction.Operands)+1)
+			cpu.IncrementPC(len(cpu.CurrentInstruction.Operands))
 		}
 		cpu.hasJumped = false
 		
 	} else {
 		// interruptFlagNow := cpu.ReadByte(0xFF0F)
-		cpu.Halted = false
+		// cpu.Halted = false
+		cpu.Tick(1)
 	}
-	
+
+	cpu.Tick(cpu.instrCycles)
 	return 0
 }
 
@@ -170,8 +191,8 @@ func (cpu *CPU) checkInterrupts() bool {
 		return false
 	}
 
-	ie := cpu.ReadByte(granularIEAddr)
-	iFlag := cpu.ReadByte(interruptFlagAddr)
+	ie := cpu.MMU.ReadByte(granularIEAddr)
+	iFlag := cpu.MMU.ReadByte(interruptFlagAddr)
 	interrupt := ie & iFlag // and the two together to find interrupts that are both enabled and pending
 	
 	switch {

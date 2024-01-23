@@ -2,6 +2,7 @@ package mmu
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 )
@@ -9,7 +10,7 @@ import (
 ///////////////
 //   TODO's  //
 ///////////////
-// 
+//
 // TODO - Check whether or not reading from vram and work ram needs to be masked like & 0x0FFF or smth
 
 type VideoRam struct {
@@ -29,12 +30,12 @@ func (v *VideoRam) SwitchBank(newIndex int) error {
 
 // ReadByte read byte from active bank in vram
 func (v *VideoRam) ReadByte(addr uint16) byte {
-	bankAddr := addr &0x1FFF
+	bankAddr := addr & 0x1FFF
 	return v.RAM[v.bank][bankAddr]
 }
 
 // WriteByte write given data to addr
-func (v *VideoRam) WriteByte(addr uint16, data uint8)  {
+func (v *VideoRam) WriteByte(addr uint16, data uint8) {
 	v.RAM[v.bank][addr] = data // TODO - check
 }
 
@@ -64,25 +65,26 @@ func (w *WorkRam) ReadByte(addr uint16) byte {
 }
 
 // WriteByte write given data to addr
-func (w *WorkRam) WriteByte(addr uint16, data uint8)  {
+func (w *WorkRam) WriteByte(addr uint16, data uint8) {
 	if addr >= 0xC000 && addr <= 0xCFFF {
 		w.RAM[0][addr] = data
 	}
-	
+
 	w.RAM[w.bank][addr] = data
 }
 
 // MMU Memory Mapped Unit - basically the hub for all the memory stuff
 type MMU struct {
 	// boot [256]byte // the boot/bios ram | 0x0000 -> 0x00FF
-	VRAM VideoRam
-	WRAM WorkRam
-	HRAM [0x7F]byte // High ram
-	IO   [0x80]byte // I/O registers
-	OAM  [0xA0]byte // object attribute memory
-	Cart *cartridge.Cartridge
+	VRAM             VideoRam
+	WRAM             WorkRam
+	HRAM             [0x7F]byte // High ram
+	IO               [0x80]byte // I/O registers
+	OAM              [0xA0]byte // object attribute memory
+	interruptEnabled byte
+	interruptsFlag   byte
+	Cart             *cartridge.Cartridge
 }
-
 
 // NewMMU create and return a new MMU
 func NewMMU(cart *cartridge.Cartridge) *MMU {
@@ -115,12 +117,19 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 
 		// Ignoring the 0xE000 -> 0xFDFF - nintendo says not allowed >:(
 
+	case addr == 0xFF0F: // Interrupt Flag
+		return mmu.interruptsFlag
+
+	case addr == 0xFFFF: // interrupts enabled
+		return mmu.interruptEnabled
+
 	case addr >= 0xFE00 && addr <= 0xFE9F: // object attribute memory
 		return mmu.OAM[addr&0x009F]
 
 		// ignore 0xFEA0 -> 0xFEFF - nintendo says not allowed again
 
 	case addr >= 0xFF00 && addr <= 0xFF7F: // I/O registers
+		log.Println("Reading from IO at address:", addr)
 		return mmu.IO[addr-0xFF00] // TODO - check
 		// TODO - Implement later
 
@@ -128,7 +137,6 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return mmu.HRAM[addr&(0xFFFF-0xFF80)]
 
 	default:
-		
 
 	}
 	return 0
@@ -138,15 +146,32 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 func (mmu *MMU) WriteByte(addr uint16, data byte) {
 	switch {
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video ram
-		mmu.VRAM.WriteByte(addr, data)
-	case addr >= 0xA000 && addr <= 0xBFFF: // External ram on cart
-		mmu.Cart.MBC.WriteByte(addr, data)
-	case addr >= 0xC000 && addr <= 0xDFFF: // work ram
-		mmu.WRAM.WriteByte(addr, data)
-	case addr >= 0xFF00 && addr <= 0xFF7F: // I/O stuff
-		mmu.IO[addr - 0xFF00] = data
-	default:
+		newAddr := addr - 0x8000
+		mmu.VRAM.WriteByte(newAddr, data)
 		
-	// TODO - finish later
+	case addr >= 0xA000 && addr <= 0xBFFF: // External ram on cart
+		newAddr := addr - 0xA000
+		mmu.Cart.MBC.WriteByte(newAddr, data)
+		
+	case addr >= 0xC000 && addr <= 0xDFFF: // work ram
+		newAddr := addr - 0xC000
+		mmu.WRAM.WriteByte(newAddr, data)
+
+	case addr == 0xFF0F: // interruptsFlag
+		mmu.interruptsFlag = data
+
+	case addr == 0xFFFF: // interrupts enabled
+		mmu.interruptEnabled = data
+
+	case addr == 0xFF01: // temporary debug
+		fmt.Println("Writing to serial:", string(data))
+		mmu.IO[1] = data
+
+	case addr >= 0xFF00 && addr <= 0xFF7F: // I/O stuff
+		log.Println("Writing to IO")
+		mmu.IO[addr-0xFF00] = data
+	default:
+
+		// TODO - finish later
 	}
 }
