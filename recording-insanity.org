@@ -80,3 +80,13 @@ Anyway today I finished the CPU instructions and am currently in the process of
 "debugging" by which I mean "wondering why nothing is working and working
 backwards to fix it" but all seems to be going fine, I'm also just gonna make a
 debugger to test my stuff
+
+* <2024-01-24 Wed>Day Eight Part one
+Okay so I forgot to record the last session so sorry for that, wasn't too
+productive
+Basically the last time I was working on this I was just getting a basic
+debugger going and I kinda realized I just absolute fucked everything...
+
+So now I'm scaling back the project, it's just gonna be a regular gameboy
+emulator for now, not color. I will attempt color in the future but at the
+moment there's too many barely documented things that are tripping me up.
