@@ -15,6 +15,7 @@ type Instruction struct {
 ///////////////////////////
 // TODO - make sure that all the functions properly assign the results to things in thigns like ADD3
 // TODO - check that I have the order of my High and Low splits correct
+// TODO - maybe switch off using the operands system and just load the stuff when needed
 
 //// ADD FUNCTIONS /////
 
@@ -746,10 +747,10 @@ func (cpu *CPU) RotateRightCarryHLData() {
 // JumpRelative8bit make an unconditional jump relative by a signed 8-bit operand
 // TODO - check that the overflow on the signed value works properly
 func (cpu *CPU) JumpRelative8bit() {
-	jumpVal := int8(cpu.CurrentInstruction.Operands[0]) // convert to signed value, should hopefully overflow to correct negative
+	jumpVal := cpu.CurrentInstruction.Operands[0] // convert to signed value, should hopefully overflow to correct negative
 
-	if jumpVal < 0 { // stupid negative values
-		cpu.PC -= uint16(jumpVal)
+	if jumpVal > 127 { // stupid negative values
+		cpu.PC -= uint16(-jumpVal)
 	} else {
 		cpu.PC += uint16(jumpVal)
 	}
@@ -760,12 +761,12 @@ func (cpu *CPU) JumpRelative8bit() {
 // JumpConditionalRelative8bit jump relative amount when cond is true
 // Can be used for both not and regular jumps
 func (cpu *CPU) JumpConditionalRelative8bit(cond *bool, jumpWhen bool) {
-	jumpVal := int8(cpu.CurrentInstruction.Operands[0])
+	jumpVal := cpu.CurrentInstruction.Operands[0]
 
 	if *cond == jumpWhen {
 		cpu.CurrentInstruction.Instruction.Cycles = 3 // instruction has variable cylce amount
-		if jumpVal < 0 {                              // stupid negative values
-			cpu.PC -= uint16(jumpVal)
+		if jumpVal > 127 {                              // stupid negative values
+			cpu.PC -= uint16(-jumpVal)
 		} else {
 			cpu.PC += uint16(jumpVal)
 		}

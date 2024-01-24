@@ -14,6 +14,7 @@ import (
 /////////////
 //
 // TODO - add like ticks and stuff
+// TODO - probably kill the operands system and replace it with just loading the values
 
 var infoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
 var debugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
@@ -41,7 +42,7 @@ type CPU struct {
 	hasJumped bool // bool for whether the CPU has just ran a jump instruction, TODO - implement
 	InterruptsEnabled bool // bool for whether or not the interrupt flag has been enabled
 	Halted bool // whether or not the CPU is halted
-	Timer timer.Timer // the cpu timer
+	Timer *timer.Timer // the cpu timer
 
 	instrCycles int // the current amount of M-cycles for the instruction
 }
@@ -52,14 +53,15 @@ func (cpu *CPU) String() string {
 	pcOne := cpu.MMU.ReadByte(cpu.PC+1)
 	pcTwo := cpu.MMU.ReadByte(cpu.PC+2)
 	pcThree := cpu.MMU.ReadByte(cpu.PC+3)
-	instructionInfo := fmt.Sprintf("Current Instruction: Code %v: Name %s", cpu.CurrentInstruction.Instruction.OpCode, cpu.CurrentInstruction.Instruction.Desc)
+	instructionInfo := fmt.Sprintf("Current Instruction: Code '%v': Operands '%v': Cycles '%v': Name '%s'", cpu.CurrentInstruction.Instruction.OpCode, cpu.CurrentInstruction.Instruction.OperandAmnt, cpu.CurrentInstruction.Instruction.Cycles, cpu.CurrentInstruction.Instruction.Desc)
 	return fmt.Sprintf("%s\nCPU Values: %v SP:%v PC:%v PCMEM:%v,%v,%v,%v", instructionInfo, cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
 }
 
 // NewCPU create and return a new cpu
-func NewCPU(mmu *mmu.MMU) (*CPU, error) {
+func NewCPU(mmu *mmu.MMU, timer *timer.Timer) (*CPU, error) {
 	newCPU := new(CPU)
 	newCPU.MMU = mmu
+	newCPU.Timer = timer
 	newCPU.Reset()
 
 	return newCPU, nil
@@ -80,29 +82,22 @@ func (cpu *CPU) Reset()  {
 
 // ResetDebug reset the cpu to debug position (basically skip the boot rom)
 func (cpu *CPU) ResetDebug()  {
-	cpu.Reg.A = 0x11
+	cpu.Reg.A = 0x01
 
-	cpu.SetFlag(C, false)
-	cpu.SetFlag(H, false)
+	cpu.SetFlag(C, true) // TODO - these depend on the checksum in the header
+	cpu.SetFlag(H, true) // TODO - these depend on the checksum in the header
 	cpu.SetFlag(N, false)
 	cpu.SetFlag(Z, true)
 
 	cpu.Reg.B = 0x00
-	cpu.Reg.C = 0x00
-	cpu.Reg.D = 0xFF
-	cpu.Reg.E = 0x56
-	cpu.Reg.H = 0x00
-	cpu.Reg.L = 0x0D
+	cpu.Reg.C = 0x13
+	cpu.Reg.D = 0x00
+	cpu.Reg.E = 0xD8
+	cpu.Reg.H = 0x01
+	cpu.Reg.L = 0x4D
 
 	cpu.SP = 0xFFFE
 	cpu.PC = 0x0100
-}
-
-// loadOpCode read the current opcode for the PC and increment the PC
-func (cpu *CPU) loadOpCode() byte {
-	opcode := cpu.MMU.ReadByte(cpu.PC)
-	cpu.PC++
-	return opcode
 }
 
 
@@ -157,31 +152,27 @@ func (cpu *CPU) SetFlag(flag int, state bool)  {
 func (cpu *CPU) Step() int {
 	cpu.instrCycles = 1
 	if !cpu.Halted {
-		cpu.checkInterrupts()
-		opCode := cpu.loadOpCode()
+		// cpu.checkInterrupts()
+		opCode := cpu.readPC()
 		
 		if opCode == 0xCB { // use the prefixed instructions
-			newOpCode := cpu.loadOpCode()
-			// cpu.PC++
+			newOpCode := cpu.readPC()
 			cpu.CompileInstruction(InstructionsPrefixed[newOpCode])
 		} else {
 			cpu.CompileInstruction(InstructionsUnprefixed[opCode])
 		}
 
 		cpu.CurrentInstruction.Instruction.ExecFun(cpu)
-		
-		if cpu.hasJumped == false { // replace with some sort of jump check later
-			cpu.IncrementPC(len(cpu.CurrentInstruction.Operands))
-		}
+
 		cpu.hasJumped = false
 		
 	} else {
 		// interruptFlagNow := cpu.ReadByte(0xFF0F)
 		// cpu.Halted = false
-		cpu.Tick(1)
+		// cpu.Tick(1)
 	}
 
-	cpu.Tick(cpu.instrCycles)
+	// cpu.Tick(cpu.instrCycles)
 	return 0
 }
 
@@ -238,6 +229,13 @@ func (cpu *CPU) IncrementPC(amnt int)  {
 	cpu.PC += uint16(amnt)
 }
 
+// readPC read the value at the current PC and increment it
+func (cpu *CPU) readPC() byte {
+	data := cpu.ReadByte(cpu.PC)
+	cpu.IncrementPC(1)
+	return data
+}
+
 // Add16 add 2 16bit numbers together, set flags and return the result
 func (cpu *CPU) Add16(a, b uint16) uint16 {
 	result := a + b
@@ -265,10 +263,10 @@ func (cpu *CPU) CompileInstruction(instruction *Instruction)  {
 	cpu.CurrentInstruction.Instruction = instruction
 	switch instruction.OperandAmnt {
 	case 1:
-		cpu.CurrentInstruction.Operands[0] = cpu.ReadByte(cpu.PC + 1)
+		cpu.CurrentInstruction.Operands[0] = cpu.readPC()
 	case 2:
-		cpu.CurrentInstruction.Operands[0] = cpu.ReadByte(cpu.PC + 1)
-		cpu.CurrentInstruction.Operands[1] = cpu.ReadByte(cpu.PC + 2)
+		cpu.CurrentInstruction.Operands[0] = cpu.readPC()
+		cpu.CurrentInstruction.Operands[1] = cpu.readPC()
 	}
 }
 
@@ -287,6 +285,7 @@ func (cpu *CPU) WriteByteToAddr(addr uint16, data byte)  {
 /////////////////////////////
 
 // pushSP push data onto the stack pointer
+// TODO - Check I have the byte order correct
 func (cpu *CPU) pushSP(data uint16)  {
 	msb, lsb := Split16(data) // split to the MSB and LSB
 	
@@ -298,6 +297,7 @@ func (cpu *CPU) pushSP(data uint16)  {
 }
 
 // popSP pop the top off the stack pointer and return the address
+// TODO - check byte order is correct
 func (cpu *CPU) popSP() uint16 {
 	lsb := cpu.ReadByte(cpu.SP)
 	cpu.SP += 1

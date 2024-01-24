@@ -25,6 +25,11 @@ type FlagsRegister struct {
 	carry      bool
 }
 
+// String flags register string
+func (f *FlagsRegister) String() string {
+	return fmt.Sprintf("Z:%v, N:%v, H:%v, C:%v", f.zero, f.subtract, f.half_carry, f.carry)
+}
+
 // toByte convert the FlagsRegister f to a uint8 byte value
 func (f *FlagsRegister) toByte() byte {
 	return byte(
@@ -61,7 +66,7 @@ type Registers struct {
 
 // String register string
 func (r *Registers) String() string {
-	return fmt.Sprintf("A:%v F:%v B:%v C:%v D:%v E:%v H:%v L:%v", r.A, r.F.toByte(), r.B, r.C, r.D, r.E, r.H, r.L)
+	return fmt.Sprintf("A:%v F:'%v' B:%v C:%v D:%v E:%v H:%v L:%v", r.A, r.F.String(), r.B, r.C, r.D, r.E, r.H, r.L)
 }
 
 // HL return the address of the HL register pair
