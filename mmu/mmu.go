@@ -1,8 +1,6 @@
 package mmu
 
 import (
-	"fmt"
-
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 	"github.com/TheOrnyx/gameboy-golor/timer"
 )
@@ -73,11 +71,14 @@ func (io *IO) ReadByte(addr uint16) byte {
 		return io.TimerControl.Read(addr)
 		
 	case addr >= 0xFF10 && addr <= 0xFF26: // AUDIO
-		
+	
 	case addr >= 0xFF30 && addr <= 0xFF3F: // Wave pattern
-
+	
 	case addr >= 0xFF40 && addr <= 0xFF4B: // LCD
-
+		if addr == 0xFF44 {
+			return 0x90
+		}
+		return io.LCD[addr - 0xFF40]
 	case addr == 0xFF4F: // Vram Bank Select (CGB)
 
 	case addr == 0xFF50: // Boot ROM
@@ -103,9 +104,10 @@ func (io *IO) WriteByte(addr uint16, data byte) {
 
 	case addr >= 0xFF01 && addr <= 0xFF02: // serial transfer
 		// TODO - maybe put silly debug stuff here
-		if addr == 0xFF01 {
-			fmt.Println("writing to serial:", data)
-		}
+		// if addr == 0xFF01 {
+		// 	fmt.Println("writing to serial:", data)
+		// 	fmt.Scanln()
+		// }
 		io.SerialTransfer[addr - 0xFF01] = data
 
 	case addr >= 0xFF04 && addr <= 0xFF07: // Timer and divider
@@ -167,12 +169,8 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		newAddr := addr - 0xA000
 		return mmu.Cart.MBC.ReadByte(newAddr)
 
-	case addr >= 0xC000 && addr <= 0xCFFF: // first work ram bank
+	case addr >= 0xC000 && addr <= 0xDFFF: // first work ram bank
 		newAddr := addr - 0xC000
-		return mmu.WRAM.ReadByte(newAddr)
-
-	case addr >= 0xD000 && addr <= 0xDFFF: // switchable Work ram bank (but for regular gameboy it's just the same)
-		newAddr := addr - 0xD000
 		return mmu.WRAM.ReadByte(newAddr)
 
 		// Ignoring the 0xE000 -> 0xFDFF - nintendo says not allowed >:(
