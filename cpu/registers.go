@@ -66,7 +66,12 @@ type Registers struct {
 
 // String register string
 func (r *Registers) String() string {
-	return fmt.Sprintf("A:%v F:'%v' B:%v C:%v D:%v E:%v H:%v L:%v", r.A, r.F.String(), r.B, r.C, r.D, r.E, r.H, r.L)
+	return fmt.Sprintf("A:0x%02X F:0x%02X B:0x%02X C:0x%02X D:0x%02X E:0x%02X H:0x%02X L:0x%02X", r.A, r.F.toByte(), r.B, r.C, r.D, r.E, r.H, r.L)
+}
+
+// StringDoctor return string representation of registers in gameboy doctor form
+func (r *Registers) StringDoctor() string {
+	return fmt.Sprintf("A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X", r.A, r.F.toByte(), r.B, r.C, r.D, r.E, r.H, r.L)
 }
 
 // HL return the address of the HL register pair

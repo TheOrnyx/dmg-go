@@ -54,3 +54,5 @@ func boolToBit(b bool) uint8 {
 
 	return 0
 }
+
+

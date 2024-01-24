@@ -395,7 +395,6 @@ func (cpu *CPU) LoadHLDataInto8BitReg(r *byte) {
 // Load8BitRegIntoHLAddr load the data in register r into address pointed to by HL
 func (cpu *CPU) Load8BitRegIntoHLAddr(r *byte) {
 	cpu.WriteByteToAddr(cpu.Reg.HL(), *r)
-	// TODO - chec this is right
 }
 
 // Load8BitDataInto16BitRegAddr load the immediate data into adress specified by r1,r2
@@ -403,7 +402,6 @@ func (cpu *CPU) Load8BitDataInto16BitRegAddr(r1, r2 *byte) {
 	data := cpu.CurrentInstruction.Operands[0]
 	addr := JoinBytes(*r1, *r2)
 	cpu.WriteByteToAddr(addr, data)
-	// TODO - check this is right
 }
 
 // Load8bRegInto16bRegAddrInc load the data from 8-bit register r
@@ -412,31 +410,33 @@ func (cpu *CPU) Load8BitDataInto16BitRegAddr(r1, r2 *byte) {
 func (cpu *CPU) Load8bRegInto16bRegAddrInc(r1, r2, r *byte) {
 	regPair := JoinBytes(*r1, *r2)
 	cpu.WriteByteToAddr(regPair, *r)
-	cpu.Inc16BitRegData(r1, r2, false) // TODO - check this is right
+	*r1, *r2 = Split16(regPair+1)
 }
 
-// Load8bRegInto16bRegAddrDec load the data from 8-bit register r
-// into the adress specified in 16-bit register r1,r2 and then
-// Decrement the regPair data after
+// Load8bRegInto16bRegAddrDec load the data from 8-bit register r into
+// the adress specified in 16-bit register r1,r2 and then Decrement
+// the regPair after
 func (cpu *CPU) Load8bRegInto16bRegAddrDec(r1, r2, r *byte) {
 	regPair := JoinBytes(*r1, *r2)
 	cpu.WriteByteToAddr(regPair, *r)
-	cpu.Dec16BitRegData(r1, r2, false) // TODO - check this is right
+	*r1, *r2 = Split16(regPair-1)
 }
 
 // Load16BitAddrIncInto8BitReg Load the data stored in the adress pointed to by r1,r2 into reg r
-// Increment the data stored in address at r1,r2 after
+// Increment the HL register address after, NOT the data
 func (cpu *CPU) Load16BitAddrIncInto8BitReg(r1, r2, r *byte) {
-	*r = cpu.ReadByte(JoinBytes(*r1, *r2))
-	cpu.Inc16BitRegData(r1, r2, false)
-	// TODO - check
+	addr := JoinBytes(*r1, *r2)
+	data := cpu.ReadByte(addr)
+	*r = data
+	*r1, *r2 = Split16(addr+1)
 }
 
 // Load16BitAddrDecInto8BitReg Load the data stored in the adress pointed to by r1,r2 into reg r
 // Decrement the data stored in address at r1,r2 after
 func (cpu *CPU) Load16BitAddrDecInto8BitReg(r1, r2, r *byte) {
-	*r = cpu.ReadByte(JoinBytes(*r1, *r2))
-	cpu.Dec16BitRegData(r1, r2, false)
+	addr := JoinBytes(*r1, *r2)
+	*r = cpu.ReadByte(addr)
+	*r1, *r2 = Split16(addr-1)
 	// TODO - check
 }
 
@@ -494,7 +494,8 @@ func (cpu *CPU) LoadRegCInteralRamIntoRegA() {
 
 // LoadRegAIntoInternalRamData load the contents of register A into internal ram referenced in immediate 16-bit data
 func (cpu *CPU) LoadRegAIntoInternalRamData() {
-	data := JoinBytes(cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1])
+	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
+	data := JoinBytes(msb, lsb)
 	cpu.WriteByteToAddr(data, cpu.Reg.A)
 	// TODO - check
 }
@@ -801,7 +802,6 @@ func (cpu *CPU) Jump16Bit() {
 // CallFunctionConditional conditional functional call to absolute address pointed to in immediate 16-bit data
 func (cpu *CPU) CallFunctionConditional(flag *bool, callWhen bool) {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
-	cpu.PC += 2 // TODO - check whether should be 2 or 3 (one for each byte read, opcode, data etc)
 
 	if *flag == callWhen {
 		cpu.pushSP(cpu.PC)
@@ -816,9 +816,8 @@ func (cpu *CPU) CallFunctionConditional(flag *bool, callWhen bool) {
 // CallFunctionUnconditional make an unconditional function call to address specified by immediate 16-bit data
 // Also put the current PC on the top of the Stack pointer
 func (cpu *CPU) CallFunctionUnconditional() {
-	newVal := JoinBytes(cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1])
-	cpu.PC += 2
-
+	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
+	newVal := JoinBytes(msb, lsb)
 	cpu.pushSP(cpu.PC)
 	cpu.PC = newVal
 	// TODO - check this is right
@@ -1023,7 +1022,7 @@ func (cpu *CPU) ReturnFromFuncInterrupt() {
 // PopSPIntoRegPair pop the stack pointer and put the address into reg pair r1,r2
 func (cpu *CPU) PopSPIntoRegPair(r1, r2 *byte) {
 	addr := cpu.popSP()
-	*r2, *r1 = Split16(addr) // TODO - check the order is right here
+	*r1, *r2 = Split16(addr) // TODO - check the order is right here
 }
 
 // PopSPIntoAFRegPair pop the stack pointer and put the value into regpair AF
@@ -1184,7 +1183,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x03, "INC BC", 0, 2, func(cpu *CPU) { cpu.Inc16BitRegPair(&cpu.Reg.B, &cpu.Reg.C) }},
 	&Instruction{0x04, "INC B", 0, 1, func(cpu *CPU) { cpu.Inc8BitReg(&cpu.Reg.B) }},
 	&Instruction{0x05, "DEC B", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.B) }},
-	&Instruction{0x06, "LD B d8", 2, 2, func(cpu *CPU) { cpu.Load8BitDataInto8BitReg(&cpu.Reg.B) }},
+	&Instruction{0x06, "LD B d8", 1, 2, func(cpu *CPU) { cpu.Load8BitDataInto8BitReg(&cpu.Reg.B) }},
 	&Instruction{0x07, "RLCA", 0, 1, func(cpu *CPU) { cpu.RotateLeftCarryRegA() }},
 	&Instruction{0x08, "LD (a16), SP", 2, 5, func(cpu *CPU) { cpu.LoadStackPointerInto16bData() }},
 	&Instruction{0x09, "ADD HL, BC", 0, 2, func(cpu *CPU) { cpu.Add16bRegToHLReg(&cpu.Reg.B, &cpu.Reg.C) }},
@@ -1226,7 +1225,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x2D, "DEC L", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.L) }},
 	&Instruction{0x2E, "LD L, d8", 1, 2, func(cpu *CPU) { cpu.Load8BitDataInto8BitReg(&cpu.Reg.L) }},
 	&Instruction{0x2F, "CPL", 0, 1, func(cpu *CPU) { cpu.ComplementRegA() }},
-	&Instruction{0x30, "JR NC, s8", 2, 2, func(cpu *CPU) { cpu.JumpConditionalRelative8bit(&cpu.Reg.F.carry, false) }},
+	&Instruction{0x30, "JR NC, s8", 1, 2, func(cpu *CPU) { cpu.JumpConditionalRelative8bit(&cpu.Reg.F.carry, false) }},
 	&Instruction{0x31, "LD SP, d16", 2, 3, func(cpu *CPU) { cpu.Load16BitDataInto16BitRegister(&cpu.SP) }},
 	&Instruction{0x32, "lD (HL-), A", 0, 2, func(cpu *CPU) { cpu.Load8bRegInto16bRegAddrDec(&cpu.Reg.H, &cpu.Reg.L, &cpu.Reg.A) }},
 	&Instruction{0x33, "INC SP", 0, 2, func(cpu *CPU) { cpu.Inc16BitRegister(&cpu.SP) }},
@@ -1420,7 +1419,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0xDE, "SBC A, d8", 1, 2, func(cpu *CPU) { cpu.Sub8BitRegFromRegAWithCarry(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
 	&Instruction{0xDF, "RST 3", 0, 4, func(cpu *CPU) { cpu.Restart(0x18) }},
 	&Instruction{0xE0, "LD (a8), A", 1, 3, func(cpu *CPU) { cpu.LoadRegAIntoInternalRam() }},
-	&Instruction{0xE1, "POP HL", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(cpu.Reg.HLByte()) }}, // TODO - check
+	&Instruction{0xE1, "POP HL", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(&cpu.Reg.H, &cpu.Reg.L) }}, // TODO - check
 	&Instruction{0xE2, "LD (C), A", 0, 2, func(cpu *CPU) { cpu.LoadRegAIntoRegCInternalRam() }},
 	&unkownInstruction,
 	&unkownInstruction,
@@ -1517,14 +1516,14 @@ var InstructionsPrefixed []*Instruction = []*Instruction{
 	&Instruction{0x36, "SWAP (HL)", 0, 4, func(cpu *CPU) { cpu.SwapHLData() }},
 	&Instruction{0x37, "SWAP A", 0, 2, func(cpu *CPU) { cpu.SwapReg(&cpu.Reg.A) }},
 
-	&Instruction{0x38, "SRA B", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.B) }},
-	&Instruction{0x39, "SRA C", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.C) }},
-	&Instruction{0x3A, "SRA D", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.D) }},
-	&Instruction{0x3B, "SRA E", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.E) }},
-	&Instruction{0x3C, "SRA H", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.H) }},
-	&Instruction{0x3D, "SRA L", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.L) }},
-	&Instruction{0x3E, "SRA (HL)", 0, 4, func(cpu *CPU) { cpu.ShiftRightHLData() }},
-	&Instruction{0x3F, "SRA A", 0, 2, func(cpu *CPU) { cpu.ShiftRightReg(&cpu.Reg.A) }},
+	&Instruction{0x38, "SRL B", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.B) }},
+	&Instruction{0x39, "SRL C", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.C) }},
+	&Instruction{0x3A, "SRL D", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.D) }},
+	&Instruction{0x3B, "SRL E", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.E) }},
+	&Instruction{0x3C, "SRL H", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.H) }},
+	&Instruction{0x3D, "SRL L", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.L) }},
+	&Instruction{0x3E, "SRL (HL)", 0, 4, func(cpu *CPU) { cpu.ShiftRightHLDataLogical() }},
+	&Instruction{0x3F, "SRL A", 0, 2, func(cpu *CPU) { cpu.ShiftRightRegLogical(&cpu.Reg.A) }},
 
 	&Instruction{0x40, "BIT 0, B", 0, 2, func(cpu *CPU) { cpu.BitTestReg(0, &cpu.Reg.B) }},
 	&Instruction{0x41, "BIT 0, C", 0, 2, func(cpu *CPU) { cpu.BitTestReg(0, &cpu.Reg.C) }},

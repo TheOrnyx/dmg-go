@@ -53,8 +53,18 @@ func (cpu *CPU) String() string {
 	pcOne := cpu.MMU.ReadByte(cpu.PC+1)
 	pcTwo := cpu.MMU.ReadByte(cpu.PC+2)
 	pcThree := cpu.MMU.ReadByte(cpu.PC+3)
-	instructionInfo := fmt.Sprintf("Current Instruction: Code '%v': Operands '%v': Cycles '%v': Name '%s'", cpu.CurrentInstruction.Instruction.OpCode, cpu.CurrentInstruction.Instruction.OperandAmnt, cpu.CurrentInstruction.Instruction.Cycles, cpu.CurrentInstruction.Instruction.Desc)
-	return fmt.Sprintf("%s\nCPU Values: %v SP:%v PC:%v PCMEM:%v,%v,%v,%v", instructionInfo, cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
+	instructionInfo := fmt.Sprintf("Current Instruction: OpCode '0x%X': Operands '%v'/'%v': Cycles '%v': Name '%s'", cpu.CurrentInstruction.Instruction.OpCode, cpu.CurrentInstruction.Instruction.OperandAmnt, cpu.CurrentInstruction.Operands, cpu.CurrentInstruction.Instruction.Cycles, cpu.CurrentInstruction.Instruction.Desc)
+	extraInfo := fmt.Sprintf("F Register Bools: %v\nItems at addresses: HL Addr:0x%04X HL Data:%v", cpu.Reg.F.String(), cpu.Reg.HL(), cpu.MMU.ReadByte(cpu.Reg.HL()))
+	return fmt.Sprintf("%s\nCPU Values: %v SP:0x%04X PC:0x%04X PCMEM:%v,%v,%v,%v\n%v", instructionInfo, cpu.Reg.String(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree, extraInfo)
+}
+
+// StringDoctor string for cpu in gameboy doctor form
+func (cpu *CPU) StringDoctor() string {
+	pc := cpu.MMU.ReadByte(cpu.PC)
+	pcOne := cpu.MMU.ReadByte(cpu.PC+1)
+	pcTwo := cpu.MMU.ReadByte(cpu.PC+2)
+	pcThree := cpu.MMU.ReadByte(cpu.PC+3)
+	return fmt.Sprintf("%v SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X", cpu.Reg.StringDoctor(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
 }
 
 // NewCPU create and return a new cpu
@@ -69,7 +79,7 @@ func NewCPU(mmu *mmu.MMU, timer *timer.Timer) (*CPU, error) {
 
 // Reset reset the cpu
 func (cpu *CPU) Reset()  {
-	infoLog.Println("Resetting CPU...")
+	// infoLog.Println("Resetting CPU...")
 	cpu.PC = 0
 	cpu.SP = 0
 	cpu.Reg.reset()
@@ -244,11 +254,11 @@ func (cpu *CPU) Add16(a, b uint16) uint16 {
 	cpu.ResetFlag(C)
 	cpu.ResetFlag(H)
 	
-	if result < a {
+	if result < a { // TODO - convert
 		cpu.SetFlag(C, true)
 	}
 
-	if result & (1 << 11) != 0 {
+	if (a & 0xFFF) + (b & 0xFFF) > 0xFFF {
 		cpu.SetFlag(H, true)
 	}
 
@@ -261,6 +271,8 @@ func (cpu *CPU) Add16(a, b uint16) uint16 {
 // pretty much stolen tbh
 func (cpu *CPU) CompileInstruction(instruction *Instruction)  {
 	cpu.CurrentInstruction.Instruction = instruction
+	cpu.CurrentInstruction.Operands[0] = 0
+	cpu.CurrentInstruction.Operands[1] = 0 // TODO - check this doesn't break anything
 	switch instruction.OperandAmnt {
 	case 1:
 		cpu.CurrentInstruction.Operands[0] = cpu.readPC()
@@ -290,10 +302,11 @@ func (cpu *CPU) pushSP(data uint16)  {
 	msb, lsb := Split16(data) // split to the MSB and LSB
 	
 	cpu.SP -= 1
-	cpu.WriteByteToAddr(cpu.SP, lsb)
+	cpu.WriteByteToAddr(cpu.SP, msb)
 
 	cpu.SP -= 1
-	cpu.WriteByteToAddr(cpu.SP, msb)
+	cpu.WriteByteToAddr(cpu.SP, lsb)
+
 }
 
 // popSP pop the top off the stack pointer and return the address
