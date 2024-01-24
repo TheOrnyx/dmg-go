@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TheOrnyx/gameboy-golor/emulator"
+	"github.com/gdamore/tcell/v2"
 )
 
 type Debugger struct {
@@ -13,7 +14,7 @@ type Debugger struct {
 // DebugEmulator run and debug an emulator
 func DebugEmulator(emu *emulator.Emulator)  {
 	emu.CPU.ResetDebug()
-	fmt.Println(emu.MMU.Cart.ROM)
+	// fmt.Println(emu.MMU.Cart.ROM)
 	fmt.Println("Beginning debug...")
 	fmt.Println(emu.DebugInfo())
 	running := true
@@ -35,7 +36,7 @@ func DebugEmulator(emu *emulator.Emulator)  {
 
 // checkSerialLink check whether data has been sent to the serial link and return it and the status
 func (d *Debugger) checkSerialLink() (bool, byte) {
-	if d.Emu.MMU.ReadByte(0xFF02) == 0x81 {
+	if d.Emu.MMU.ReadByte(0xFF02) != 0 {
 		char := d.Emu.MMU.ReadByte(0xFF01)
 		d.Emu.MMU.WriteByte(0xFF02, 0)
 		return true, char
@@ -43,4 +44,9 @@ func (d *Debugger) checkSerialLink() (bool, byte) {
 		// fmt.Printf("%v", char)
 	}
 	return false, 0
+}
+
+// drawText draws given text into specified position on screen
+func drawText(s *tcell.Screen)  {
+	
 }
