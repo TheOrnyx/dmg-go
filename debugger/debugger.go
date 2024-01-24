@@ -2,6 +2,8 @@ package debugger
 
 import (
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/TheOrnyx/gameboy-golor/emulator"
 	"github.com/gdamore/tcell/v2"
@@ -11,27 +13,63 @@ type Debugger struct {
 	Emu *emulator.Emulator
 }
 
+// DebugEmulatorDoctor run and debug emulator outputting in doctor format
+func DebugEmulatorDoctor(emu *emulator.Emulator)  {
+	emu.CPU.ResetDebug()
+	count := 1
+	running := true
+	debugger := Debugger{emu}
+	var serialOutput string
+	
+	for running && !strings.Contains(serialOutput, "Passed") {
+		fmt.Printf("%v\n", emu.CPU.StringDoctor())
+		emu.CPU.Step()
+		serialWritten, data := debugger.checkSerialLink()
+		if serialWritten {
+			// fmt.Printf("%v", string(data))
+			serialOutput += string(data)
+		}
+		
+		time.Sleep(time.Nanosecond*5)
+
+		count += 1
+	}
+	fmt.Println(serialOutput)
+}
+
 // DebugEmulator run and debug an emulator
 func DebugEmulator(emu *emulator.Emulator)  {
 	emu.CPU.ResetDebug()
+	count := 1
 	// fmt.Println(emu.MMU.Cart.ROM)
 	fmt.Println("Beginning debug...")
 	fmt.Println(emu.DebugInfo())
 	running := true
 	// debugger := Debugger{emu}
 	
-	for running {
+	for running{
 		fmt.Println("---------------------------------------------")
-		fmt.Println("")
+		fmt.Println("Current Step Count:", count)
 		// serialWritten, data := debugger.checkSerialLink()
 		// if serialWritten {
 		// 	fmt.Println("Found serial data write")
 		// 	fmt.Printf("%v", data)
 		// }
-		emu.CPU.Step()
 		fmt.Printf("%v\n", emu.CPU)
-		fmt.Scanln()
+		emu.CPU.Step()
+		
+		if true {
+			time.Sleep(time.Nanosecond*5)
+		} else {
+			fmt.Scanln()
+		}
+		count += 1
 	}
+}
+
+// printDoctorString print the string in gameboy doctor form
+func printDoctorString(emu *emulator.Emulator)  {
+	
 }
 
 // checkSerialLink check whether data has been sent to the serial link and return it and the status
