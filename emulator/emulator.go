@@ -8,6 +8,7 @@ import (
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 	"github.com/TheOrnyx/gameboy-golor/cpu"
 	"github.com/TheOrnyx/gameboy-golor/mmu"
+	"github.com/TheOrnyx/gameboy-golor/timer"
 )
 
 var InfoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
@@ -32,9 +33,11 @@ func NewEmulator(romPath string) (*Emulator, error) {
 	if err != nil {
 		return nil, err
 	}
-	newEmu.MMU = mmu.NewMMU(cart)
+
+	timer := new(timer.Timer)
+	newEmu.MMU = mmu.NewMMU(cart, timer)
 	
-	newEmu.CPU, _ = cpu.NewCPU(newEmu.MMU)
+	newEmu.CPU, _ = cpu.NewCPU(newEmu.MMU, timer)
 
 	return newEmu, nil
 }
