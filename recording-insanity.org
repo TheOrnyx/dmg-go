@@ -90,3 +90,17 @@ debugger going and I kinda realized I just absolute fucked everything...
 So now I'm scaling back the project, it's just gonna be a regular gameboy
 emulator for now, not color. I will attempt color in the future but at the
 moment there's too many barely documented things that are tripping me up.
+
+* <2024-01-24 Wed>Day Eight Part two
+After a long day of trying to figure out shit and rewriting the MMU I figured
+out the problem I was having was to do with none of them, it was my own
+stupiditiy 😎
+
+Basically the ROM's have a jump function so they can you know, jump to the
+functions they need to run and it uses the next two immediate bytes slapped
+together as its jump point. My problem... I switched my stupid system to
+immediately increment the program counter after I loaded the opcode, but my
+operands were still using pc+1 and pc+2 to load the values, so I was jumping to
+a way larger value than I wanted, but anyway I fixed it.
+
+So now onto testing and stuff ig
