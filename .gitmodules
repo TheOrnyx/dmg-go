@@ -1,3 +1,6 @@
 [submodule "Data/Roms/blargg-test-roms"]
 	path = Data/Roms/blargg-test-roms
 	url = https://github.com/retrio/gb-test-roms.git
+[submodule "Data/Roms/blargg-logs/source"]
+	path = Data/Roms/blargg-logs/source
+	url = https://github.com/wheremyfoodat/Gameboy-logs.git
