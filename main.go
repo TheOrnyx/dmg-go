@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/TheOrnyx/gameboy-golor/debugger"
@@ -14,15 +13,15 @@ const WinScalar = 4 //the scalar used to scale up the gbc screen
 const WinWidth, WinHeight = 160 * WinScalar, 144 * WinScalar
 
 func main() {
-	fmt.Println("Starting...")
+	// fmt.Println("Starting...")
 	// window.StartSDLWindowSystem(WinWidth, WinHeight)
-	emulator, err := emu.NewEmulator("./Data/Roms/blargg-test-roms/cpu_instrs/individual/07-jr,jp,call,ret,rst.gb")
+	emulator, err := emu.NewEmulator("./Data/Roms/blargg-test-roms/cpu_instrs/individual/11-op a,(hl).gb")
 	if err != nil {
 		log.Fatal("Error making new emulator:", err)
 	}
 
-	debugger.DebugEmulator(emulator)
-	
+	debugger.DebugEmulatorDoctor(emulator)
+	// debugger.DebugEmulator(emulator)
 	// var running bool = true
 	// for running {
 	// 	emulator.CPU.Step()
@@ -36,5 +35,5 @@ func main() {
 	// 	time.Sleep(time.Second/2)
 	// }
 	
-	emu.InfoLog.Println("Program finished, exiting...")
+	// emu.InfoLog.Println("Program finished, exiting...")
 }
