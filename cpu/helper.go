@@ -36,6 +36,11 @@ func JoinBytes(high, low byte) uint16 {
 	// TODO - check
 }
 
+// carryAdd8b adds two bytes together and returns true if they overflow for a carry
+func carryAdd8b(a, b byte) bool {
+	return (uint16(a)) + (uint16(b)) > 0xFF
+}
+
 
 // Split16 split a 16 bit value into two byte values and return them
 // TODO - check this is right, should be tho

@@ -94,21 +94,17 @@ func (cpu *CPU) AddSPToHLReg() {
 }
 
 // Add8BitDataToSP add immediate 8-bit data to the stack pointer and store result as stack pointer
+// NOTE - for some dumbass reason the stupid thing only needs you to test the bottom 8 bits for the flags
+// https://discord.com/channels/465585922579103744/465586075830845475/1199883769759404053
 func (cpu *CPU) Add8BitDataToSP() {
 	var result uint16
 	var carry, halfCarry bool
 	data := int8(cpu.CurrentInstruction.Operands[0])
+	dataUn := uint16(data)
 
-	if data < 0 {
-		result = cpu.SP - uint16(-data)                            // TODO - check
-		carry = int(cpu.SP)-int(-data) < 0                         // TODO - gross
-		halfCarry = int(cpu.SP&0x0FF)-int(uint16(-data)&0x0FF) < 0 // TODO - check
-	} else {
-		result = cpu.SP + uint16(data)
-		carry = uint32(cpu.SP)+uint32(data) > 0xFFFF
-		halfCarry = (cpu.SP&0x0FF)+(uint16(data)&0x0FF) > 0x0FF
-		// TODO - check
-	}
+	result = cpu.SP + uint16(data)
+	carry = carryAdd8b(byte(cpu.SP), byte(dataUn))
+	halfCarry = halfCarryAdd8b(byte(cpu.SP), byte(dataUn))
 
 	cpu.ResetFlag(Z)
 	cpu.ResetFlag(N)
@@ -124,17 +120,11 @@ func (cpu *CPU) Add8BitDataToSPIntoHLReg() {
 	var result uint16
 	var carry, halfCarry bool
 	data := int8(cpu.CurrentInstruction.Operands[0])
-
-	if data < 0 {
-		result = cpu.SP - uint16(-data)                            // TODO - check
-		carry = int(cpu.SP)-int(-data) < 0                         // TODO - gross
-		halfCarry = int(cpu.SP&0x0FF)-int(uint16(-data)&0x0FF) < 0 // TODO - check
-	} else {
-		result = cpu.SP + uint16(data)
-		carry = uint32(cpu.SP)+uint32(data) > 0xFFFF
-		halfCarry = (cpu.SP&0x0FF)+(uint16(data)&0x0FF) > 0x0FF
-		// TODO - check
-	}
+	data16 := uint16(data)
+	
+	result = cpu.SP + uint16(data)
+	carry = carryAdd8b(byte(cpu.SP), byte(data16))
+	halfCarry = halfCarryAdd8b(byte(cpu.SP), byte(data16))
 
 	cpu.ResetFlag(Z)
 	cpu.ResetFlag(N)
@@ -480,14 +470,14 @@ func (cpu *CPU) LoadRegAIntoInternalRam() {
 }
 
 // LoadRegAIntoRegCInternalRam load the contents of reg A into the location of internal ram pointed to by reg C
-func (cpu *CPU) LoadRegAIntoRegCInternalRam() {
+func (cpu *CPU) LoadRegAIntoRegCInternalRam() { // TODO - check IMPORTANT
 	addr := 0xFF00 + uint16(cpu.Reg.C)
 	cpu.WriteByteToAddr(addr, cpu.Reg.A)
 	// TODO - check
 }
 
 // LoadRegCInteralRamIntoRegA load the data stored in interal ram at the address pointed to by register C into reg A
-func (cpu *CPU) LoadRegCInteralRamIntoRegA() {
+func (cpu *CPU) LoadRegCInteralRamIntoRegA() { // TODO - check IMPORTANT
 	cpu.Reg.A = cpu.ReadByte(0xFF00 + uint16(cpu.Reg.C))
 	// TODO - check
 }
@@ -517,7 +507,8 @@ func (cpu *CPU) LoadHLRegIntoSP() {
 // Load16BitDataIntoRegA load data pointed to by immediate 16-bit address into register A
 func (cpu *CPU) Load16BitDataIntoRegA() {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
-	cpu.Reg.A = cpu.ReadByte(JoinBytes(msb, lsb)) // TODO - check this is right order and stuff
+	addr := JoinBytes(msb, lsb)
+	cpu.Reg.A = cpu.ReadByte(addr) // TODO - check this is right order and stuff
 }
 
 //// ROTATE FUNCTIONS /////
@@ -985,7 +976,10 @@ func (cpu *CPU) ComplementRegA() {
 }
 
 // SetCarryFlag set the carry flag to true
+// for some reason also sets N and H to false
 func (cpu *CPU) SetCarryFlag() {
+	cpu.SetFlag(N, false)
+	cpu.SetFlag(H, false)
 	cpu.SetFlag(C, true)
 }
 
@@ -1235,7 +1229,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0x37, "SCF", 0, 1, func(cpu *CPU) { cpu.SetCarryFlag() }},
 	&Instruction{0x38, "JR C, s8", 1, 2, func(cpu *CPU) { cpu.JumpConditionalRelative8bit(&cpu.Reg.F.carry, true) }},
 	&Instruction{0x39, "ADD HL, SP", 0, 2, func(cpu *CPU) { cpu.AddSPToHLReg() }},
-	&Instruction{0x3A, "LD A, (HL-)", 0, 2, func(cpu *CPU) { cpu.Load8bRegInto16bRegAddrDec(&cpu.Reg.H, &cpu.Reg.L, &cpu.Reg.A) }},
+	&Instruction{0x3A, "LD A, (HL-)", 0, 2, func(cpu *CPU) { cpu.Load16BitAddrDecInto8BitReg(&cpu.Reg.H, &cpu.Reg.L, &cpu.Reg.A) }},
 	&Instruction{0x3B, "DEC SP", 0, 2, func(cpu *CPU) { cpu.DecSPReg() }},
 	&Instruction{0x3C, "INC A", 0, 1, func(cpu *CPU) { cpu.Inc8BitReg(&cpu.Reg.A) }},
 	&Instruction{0x3D, "DEC A", 0, 1, func(cpu *CPU) { cpu.Dec8BitReg(&cpu.Reg.A) }},
@@ -1402,7 +1396,7 @@ var InstructionsUnprefixed []*Instruction = []*Instruction{
 	&Instruction{0xCD, "CALL a16", 2, 6, func(cpu *CPU) { cpu.CallFunctionUnconditional() }},
 	&Instruction{0xCE, "ADC A, d8", 1, 2, func(cpu *CPU) { cpu.Add8BitRegToRegAWithCarry(&cpu.CurrentInstruction.Operands[0]) }}, // TODO - check
 	&Instruction{0xCF, "RST 1", 0, 4, func(cpu *CPU) { cpu.Restart(0x08) }},
-	&Instruction{0xD0, "RET NC", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.zero, false) }},
+	&Instruction{0xD0, "RET NC", 0, 2, func(cpu *CPU) { cpu.ReturnConditional(&cpu.Reg.F.carry, false) }},
 	&Instruction{0xD1, "POP DE", 0, 3, func(cpu *CPU) { cpu.PopSPIntoRegPair(&cpu.Reg.D, &cpu.Reg.E) }},
 	&Instruction{0xD2, "JP NC, a16", 2, 3, func(cpu *CPU) { cpu.JumpConditional16Bit(&cpu.Reg.F.carry, false) }},
 	&unkownInstruction,
