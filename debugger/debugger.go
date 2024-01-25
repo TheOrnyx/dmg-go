@@ -17,11 +17,11 @@ type Debugger struct {
 func DebugEmulatorDoctor(emu *emulator.Emulator)  {
 	emu.CPU.ResetDebug()
 	count := 1
-	running := true
+	maxTests := 9000000 // set to 0 or below for infinite running >:3
 	debugger := Debugger{emu}
 	var serialOutput string
 	
-	for running && !strings.Contains(serialOutput, "Passed") {
+	for !strings.Contains(serialOutput, "Passed") && count != maxTests {
 		fmt.Printf("%v\n", emu.CPU.StringDoctor())
 		emu.CPU.Step()
 		serialWritten, data := debugger.checkSerialLink()
@@ -30,7 +30,7 @@ func DebugEmulatorDoctor(emu *emulator.Emulator)  {
 			serialOutput += string(data)
 		}
 		
-		time.Sleep(time.Nanosecond*5)
+		// time.Sleep(time.Nanosecond*2)
 
 		count += 1
 	}
@@ -45,16 +45,16 @@ func DebugEmulator(emu *emulator.Emulator)  {
 	fmt.Println("Beginning debug...")
 	fmt.Println(emu.DebugInfo())
 	running := true
-	// debugger := Debugger{emu}
+	debugger := Debugger{emu}
+	var serialOutput string
 	
-	for running{
+	for running && !strings.Contains(serialOutput, "Passed") {
 		fmt.Println("---------------------------------------------")
 		fmt.Println("Current Step Count:", count)
-		// serialWritten, data := debugger.checkSerialLink()
-		// if serialWritten {
-		// 	fmt.Println("Found serial data write")
-		// 	fmt.Printf("%v", data)
-		// }
+		serialWritten, data := debugger.checkSerialLink()
+		if serialWritten {
+			serialOutput += string(data)
+		}
 		fmt.Printf("%v\n", emu.CPU)
 		emu.CPU.Step()
 		
@@ -65,6 +65,7 @@ func DebugEmulator(emu *emulator.Emulator)  {
 		}
 		count += 1
 	}
+	// fmt.Println("\n",serialOutput)
 }
 
 // printDoctorString print the string in gameboy doctor form
