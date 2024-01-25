@@ -104,3 +104,13 @@ operands were still using pc+1 and pc+2 to load the values, so I was jumping to
 a way larger value than I wanted, but anyway I fixed it.
 
 So now onto testing and stuff ig
+
+* <2024-01-25 Thu>Day Nine
+Today was a pretty productive day ngl, finally figured out some of thr problems
+(and parts where I was being dumb and making myself problems) with stuff and
+started testing the CPU inststructions with the blargg test roms, as of writing
+this I have all but 2 done. I am not at all looking forward to doing the one for
+the interrupts, that's gonna suck.
+
+But yeah, got a proper debug setup for stuff like gameboy doctor and am busy
+testing the CPU instructions and fixing as many problems as I can
