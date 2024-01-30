@@ -451,14 +451,13 @@ func (cpu *CPU) Load16bRegDataIntoReg(regHigh, regLow, reg *uint8) {
 	*reg = cpu.ReadByte(JoinBytes(*regHigh, *regLow))
 }
 
-// LoadStackPointerInto16bData load the data from the stack pointer into the adress specified nn
+// LoadStackPointerInto16bData load the data from the stack pointer into the adress specified in immediate 16bit data
 func (cpu *CPU) LoadStackPointerInto16bData() {
 	var low, high byte = cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
 	address := JoinBytes(high, low)
 
 	cpu.WriteByteToAddr(address, byte(cpu.SP&0xFF))
 	cpu.WriteByteToAddr((address+1)&0xFFFF, byte(cpu.SP>>8))
-	// TODO check if need to increase PC here
 }
 
 // LoadRegAIntoInternalRam load contents of register A into internal ram pointed to by immediate 8-bit(?) data
@@ -485,9 +484,8 @@ func (cpu *CPU) LoadRegCInteralRamIntoRegA() { // TODO - check IMPORTANT
 // LoadRegAIntoInternalRamData load the contents of register A into internal ram referenced in immediate 16-bit data
 func (cpu *CPU) LoadRegAIntoInternalRamData() {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
-	data := JoinBytes(msb, lsb)
-	cpu.WriteByteToAddr(data, cpu.Reg.A)
-	// TODO - check
+	addr := JoinBytes(msb, lsb)
+	cpu.WriteByteToAddr(addr, cpu.Reg.A)
 }
 
 // LoadInternalRamDataIntoRegA load the data in internal ram located at immediate data address into register A
@@ -508,7 +506,7 @@ func (cpu *CPU) LoadHLRegIntoSP() {
 func (cpu *CPU) Load16BitDataIntoRegA() {
 	lsb, msb := cpu.CurrentInstruction.Operands[0], cpu.CurrentInstruction.Operands[1]
 	addr := JoinBytes(msb, lsb)
-	cpu.Reg.A = cpu.ReadByte(addr) // TODO - check this is right order and stuff
+	cpu.Reg.A = cpu.ReadByte(addr)
 }
 
 //// ROTATE FUNCTIONS /////
@@ -1115,7 +1113,7 @@ func (cpu *CPU) SwapHLData() {
 	cpu.ResetFlag(H)
 	cpu.ResetFlag(C)
 
-	cpu.WriteByteToAddr(cpu.Reg.HL(), data) // TODO - CHECK THIS
+	cpu.WriteByteToAddr(cpu.Reg.HL(), result)
 }
 
 // BitTestReg test bit in specified position in reg r
