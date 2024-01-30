@@ -1,8 +1,8 @@
 #+TITLE: Progress on blargg test roms
 
-* CPU
+* CPU - COMPLETE YIOPEEEE 
 1. [X] 01-special.gb           
-2.  [ ] 02-interrupts.gb        
+2. [X] 02-interrupts.gb        
 3. [X] 03-op sp,hl.gb          
 4. [X] 04-op r,imm.gb          
 5. [X] 05-op rp.gb             
@@ -11,6 +11,6 @@
 8. [X] 08-misc instrs.gb       
 9. [X] 09-op r,r.gb            
 10. [X] 10-bit ops.gb            
-11. [ ] 11-op a,(hl).gb          
+11. [X] 11-op a,(hl).gb          
   
   
