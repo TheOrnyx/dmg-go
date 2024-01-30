@@ -1,6 +1,16 @@
 package timer
 
-import "log"
+import (
+	"fmt"
+	"log"
+)
+
+//////////////////////////////
+// Timers (god I hate them) //
+//////////////////////////////
+//
+// TODO - implement clock speed properly
+// TODO - check if I need to do this by T-cycles, idk
 
 type Timer struct {
 	div                    uint16 // the div counter - only upper 8-bits can be read by cpu
@@ -8,11 +18,17 @@ type Timer struct {
 	tma                    byte   // value to set timaCounter to when it overflows
 	tac                    byte   // timer control - controls behaviour of the TIMA reg
 	lastBit                uint16  // the last and result of the chose DIV value and the timer enable bit, used to detect falling edge
-	overflowed             bool   // whether or not timer has overflowed
+	Overflowed             bool   // whether or not timer has overflowed
 	doubleSpeed            bool   // whether or not the timer is running on double speed - TODO IMPLEMENT
 	timaReload             bool   // whether or not you're in the process of reloading the TIMA
 	cyclesTilTIMAInterrupt int    // number of cycles until the TIMA IRQ interrupt flag is raised
 }
+
+const ClockSpeed = 4194304 // the CPU clock speed in Hz (TODO - move this cuz it's in both cpu and here)
+
+const ( // Clock Speed constants 
+	
+)
 
 // Tick tick timer by cycles amnt of m-cycles
 // NOTE - only increments by one at the moment as I haven't adapted it
@@ -20,20 +36,21 @@ type Timer struct {
 // TODO - add a return for overflow or smth - I like the function pointer idea but will see
 // TODO - check out that silly thing about DIV only being like 14 bits (https://discord.com/channels/465585922579103744/465586075830845475/1184659262421618729)
 func (t *Timer) Tick(cycles int) {
-	// t.div += uint16(cycles*4)
-	// timerEnabled := t.tac & 0x04 == 0x04
+	cycles = cycles*4
 
-	t.timaReload = false
-	if t.cyclesTilTIMAInterrupt > 0 {
-		t.cyclesTilTIMAInterrupt -= 1
-		if t.cyclesTilTIMAInterrupt == 0 {
-			// TODO - add bit for raising the interrupt flag
-			t.overflowed = true
-			t.tima = t.tma
-			t.timaReload = true
+	for i := 0; i < cycles; i++ {
+		t.timaReload = false
+		if t.cyclesTilTIMAInterrupt > 0 {
+			t.cyclesTilTIMAInterrupt -= 1
+			if t.cyclesTilTIMAInterrupt == 0 {
+				// TODO - add bit for raising the interrupt flag
+				t.Overflowed = true
+				t.tima = t.tma
+				t.timaReload = true
+			}
 		}
+		t.changeDiv(t.div + 1)
 	}
-	t.changeDiv(t.div + 1)
 }
 
 // changeDiv change the value of the div and also adjust TMA accordingly
@@ -113,4 +130,31 @@ func (t *Timer) Read(addr uint16) byte {
 		log.Println("Unkown Timer read address:", addr)
 		return 0
 	}
+}
+
+// TacInfo get the info from the tac bits for whether TIMA is enabled and what the clockspeed is
+func (t *Timer) TacInfo() (enabled bool, speed int) {
+	enabled = t.tac & 0x04 != 0
+	speedBits := t.tac & 0x03
+
+	switch speedBits {
+	case 0:
+		speed = ClockSpeed/1024
+		
+	case 1:
+		speed = ClockSpeed/16
+
+	case 2:
+		speed = ClockSpeed/64
+
+	case 3:
+		speed = ClockSpeed/256
+	}
+
+	return enabled, speed
+}
+
+// String get debug string for timer
+func (t *Timer) String() string {
+	return fmt.Sprintf("DIV:%v, TIMA:%v, TMA:%v, TAC:%v, CyclesTillOverflow:%v", t.div, t.tima, t.tma, t.tac, t.cyclesTilTIMAInterrupt) // TODO - add seperate stuff for tma
 }
