@@ -114,3 +114,20 @@ the interrupts, that's gonna suck.
 
 But yeah, got a proper debug setup for stuff like gameboy doctor and am busy
 testing the CPU instructions and fixing as many problems as I can
+
+* <2024-01-31 Wed>Day Ten
+I finally did it!
+The CPU instructions all passed!!! I am FRee!!!
+But like yeah I got it all working, started with test 11 not working because I
+fucked up my swap instruction (forgot to write the result lmao) and then the
+instructions thankfully worked without a lot of tinkering, well...
+Except for the timer, the timer was annoying and bullshit and I hate it. It was
+a simple fix tho, basically I was passing in m-cycles and forgot to both
+
++ Have my code actually increase by the cycles rather than one
++ Have my code run through a for loop to increase the timer by 4 t-cycles
+  individually for each m-cycle
+
+but yeah once I figured that out it was all good and working!!
+
+Anyway now onto the PPU (pain)
