@@ -1,0 +1,160 @@
+#+TITLE: PPU Information (basically notes)
+
+* Note
+Most of this is just kinda stolen and rewritten info from
+[https://hacktix.github.io/GBEDG/ppu/] I'm mostly just jotting down some things
+for my own sake so I can remember and check this as a review
+
+* Tiles
+Tiles are basically fixed 8x8 pixel tiles which are placed on the screen in a
+set grid.
+Tiles are represented in a set of a format called "2BPP" or "two bits per
+pixel". Because since the original gameboy only supports 4 colors you only
+need 2-bits to store the color data for a pixel. So basically every 2 bytes
+represents one row of Pixels and you need 126-bits or 16-bytes to represent a single tile
+since each tile has 64 pixels
+
+So basically with each 2 bytes each bit from each gets combined to choose the
+color, with the first byte giving the LSB and the second byte giving the
+MSB.
+For example if I have ~0b11110000~ as the first and ~0b00001111~ as the second
+then the leftmost pixel will be of color ~01~ and the rightmost pixel will be of
+color ~10~.
+
+* Tile Data
+Tile data is stored in VRAM at the memory area 0x8000 to 0x97FF with each tile
+taking up 16-bytes which means you can store 384 tiles. However in CGB mode this
+is doubled due to the 2 VRAM banks
+
+Each of these tiles (or objects) 
+
+There are 3 "blocls"
+
+* Layers
+The gameboy display uses three seperate layers to display its graphics on, these
+being the background, the window and the sprite layer
+
+** Background Layer
+The background layer is a 32x32 tile grid (256x256 pixels) where tiles can be
+placed. However the gameboy only shows a 20x18 tile section of this (160x144
+pixels) so the displayed section is represented by the SCX and SCY registers
+which represent the offset of the viewport from the left and top of the screen.
+
+** Window Layer
+Window is the same as the background being that it's another 32x32 tile grid
+where tiles can be placed however it's treated kinda like an overlay over the
+background. So it's drawn on top. The position of the window is determined by
+the WX and WY registers.
+
+For some reason the WX register is a bit weird, it's leftmost value is at WX=7
+so any horizontal position should be calculated with WX-7
+
+** Sprite Layer
+Sprites are basically just 8x8 (or in the case of tall sprites 8x16) pixel tiles
+which aren't limited by the background/ window grid (what does this mean??). The
+sprite data is stored in the OAM which can fit up to 40 sprites.
+
+* OAM Memory
+Object Attribute Memory is a section of memory which contains the data used to
+display sprites on screen. each sprite takes up 4 bytes in the OAM which allows
+for a total of 40 sprites to be displayed. Each sprite in the OAM is structure
+in this way
+
++ Byte 0 - Y-Position: The first byte of each entry is used to represent the
+  vertical position of the sprite on the screen. However, in order to allow
+  sprites to come from the top of the screen the pos is offset by 16, so y=16
+  displays the sprite at the top of the screen and y=0 completely hides it
++ Byte 1 - X-Position: The second byte represents the horizontal position of the
+  sprite but offset by 8 this time, so x=8 puts the sprite to the very left and
+  x=0 has them completely hidden. However if you place an object horizontally
+  offscreen it still contributes to the limit of ten objects per scanline
++ Byte 2 - tile Index: The third byte represents the tile number for fetching
+  the graphics data from the memory area at 0x8000-0x8FFF, however in 8x8 mode
+  the tile number is just it's place in memory but in 8x16 mode it's different
+  (finish this)
++ Byte 3 - Attributes and flags: The last byte contains bit-flags that can apply
+  certain effects and stuff to a sprite. These are the flags:
+  + Bit 7 - Priority:
+    + 0: sprite is rendered above the background
+    + 1: background colors 1-3 are drawn over the sprite
+  + Bit 6 - Y-Flip:
+    + 0: rendered as normal
+    + 1: Flip vertically
+  + Bit 5 - X-Flip:
+    + 0: rendered as normal
+    + 1: Flip Horizontally
+  + Bit 4 - DMG palette (Non CGB mode only)
+    + 0: use OBP0
+    + 1: use OBP1
+  + Bit 3 - Bank (CGB Mode ONly)
+    + 0: Fetch tile from VRAM bank 0
+    + 1: Fetch tile from VRAM bank 1
+  + Bit 0,1,2 - which CGB palette from OBP0-7 to use
+
+* Modes
+** OAM Scan Mode (mode 2)
+Basically this mode is entered at the start of every scanline (except for vblank
+ones). It is entered before any pixels are drawn and it basically just makes the
+PPU search the OAM memory for sprites that it should render and it stores them
+in a buffer.
+Procedure takes 80 T-Cycles and PPU checks new OAM entry every 2 T-cycles
+
+Sprites are added to the buffer if _ALL_ of the following conditions apply:
++ Sprites X-Pos is greater than 0
++ LY+16 is greater than or equal to Sprites Y-Pos
++ LY+16 is less than Sprite Y-Pos + Sprite Height (8 in normal mode, 16 in
+  tall-sprite mode)
++ Amount of sprites already stored in the buffer is less than 10
+
+** Drawing Mode (Mode 3)
+Drawing Mode is just where the PPU transfers the actual pixels to the LCD
+display.
+Duration of the mode relies on several things
+# TODO - finish filling this out, what things and what's the length
+
+** H-Blank mode (Mode 0)
+This mode take sup the remainder of the scaline after Drawing Mode finishes,
+basically is just padding to get the duration of the scanline to 546
+T-Cycles. The PPU pauses during this mode
+
+** V-Blank Mode (Mode 1)
+VBlank mode is basically the same as H-Blank but instead of taking place at the
+end of every scanline it takes place as the end of every frame.
+Even though the gameboys vertical resolution is 144 Pixels the PPU does not
+handle 144 scanlines, instead there are 154 scanlines and the last 10 consist of
+the PPU not doing anything.
+A V-Blank scanline takes 456 T-Cycles just like any other scanline
+
+* Pixel FIFO
+The gameboy doesn't render whole frames or even scanlines at the same time so
+instead individual pixels are pushed to the LCD one by one. In order to do this
+the pixel FIFO system is used.
+
+In practice there are two pixel FIFOs, one for background/window pixels and another one
+for object pixels. these two FIFOs can contain 8 pixels each and each pixel in
+the FIFO has four properties for it:
++ Color: Value between 0 and 3
++ Palette: on CGB this is a value between 0 and 7 but on DMG this only applies
+  to objects
++ Priority: on CGB this is the OAM index and this doens't exist in DMG
++ Background priority: holds the value of the Priority flag from the
+  attributes/flags of the object
+
+** Background FIFO Pixel fetcher
+The FIFO fetcher is responsible for loading the FIFO registers with data. It's
+constantly active throughout PPU mode 3 and keeps supplying 
+
+* Things to implement
+Gotta plan stuff so here's just a list of things I need to implement for each
+part
+
+** OAM functions
++ Function that gets up to the first 10 objects for any given scanline and
+  returns them
+
+** PPU functions
++ Implement the stuff for the scanline
+  + Getting the tiles for a scanline
+  + Getting all the stuff
+  + Making the scanline etc
++ Implement the pixel FIFO and get it working
