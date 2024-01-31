@@ -115,7 +115,7 @@ the interrupts, that's gonna suck.
 But yeah, got a proper debug setup for stuff like gameboy doctor and am busy
 testing the CPU instructions and fixing as many problems as I can
 
-* <2024-01-31 Wed>Day Ten
+* <2024-01-31 Wed>Day Ten 
 I finally did it!
 The CPU instructions all passed!!! I am FRee!!!
 But like yeah I got it all working, started with test 11 not working because I
@@ -130,4 +130,22 @@ a simple fix tho, basically I was passing in m-cycles and forgot to both
 
 but yeah once I figured that out it was all good and working!!
 
-Anyway now onto the PPU (pain)
+Anyway now onto the PPU (pain)...
+
+-----
+
+Alright so the PPU....
+It's uh, definitely a thing. It's a really confusing mess I'm ngl so I've
+started a file to take notes of specific parts of it that should help but it's
+gonna take a while to get everything working. But I'm gonna take a smarter
+approach this time, instead of just plunging straight into it I'm gonna take
+some time to plan things out and make sure I've got everything working before I
+start implementing a lot of important code.
+
+I also moved a couple of things from the MMU into the PPU as I felt it'd be a
+bit easier to access and utilize them there. The things I moved was the VRAM, as
+I felt it suited the PPU a bit better, I also moved the OAM for the same reason
+and the last thing I moved was the LCD section of the IO registers as once
+again, much nicer to have in the PPU section
+
+But yeah, things seem to be going smoothly 😎
