@@ -15,7 +15,7 @@ const WinWidth, WinHeight = 160 * WinScalar, 144 * WinScalar
 func main() {
 	// fmt.Println("Starting...")
 	// window.StartSDLWindowSystem(WinWidth, WinHeight)
-	emulator, err := emu.NewEmulator("./Data/Roms/blargg-test-roms/cpu_instrs/individual/11-op a,(hl).gb")
+	emulator, err := emu.NewEmulator("./Data/Roms/blargg-test-roms/cpu_instrs/cpu_instrs.gb")
 	if err != nil {
 		log.Fatal("Error making new emulator:", err)
 	}

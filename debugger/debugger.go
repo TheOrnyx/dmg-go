@@ -17,7 +17,7 @@ type Debugger struct {
 func DebugEmulatorDoctor(emu *emulator.Emulator)  {
 	emu.CPU.ResetDebug()
 	count := 1
-	maxTests := 9000000 // set to 0 or below for infinite running >:3
+	maxTests := 55000000 // set to 0 or below for infinite running >:3
 	debugger := Debugger{emu}
 	var serialOutput string
 	
@@ -57,6 +57,7 @@ func DebugEmulator(emu *emulator.Emulator)  {
 		}
 		fmt.Printf("%v\n", emu.CPU)
 		emu.CPU.Step()
+		fmt.Scanln()
 		
 		if true {
 			time.Sleep(time.Nanosecond*5)
