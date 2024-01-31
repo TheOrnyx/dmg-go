@@ -1,39 +1,12 @@
-package main
+package ppu
 
-import (
-	_"image"
-	"image/color"
-)
-
-const ScreenWidth, ScreenHeight = 160, 144 //the width and height of the screen
-
-type ColorPalette struct {
-	Colors [32 * 32]color.RGBA
-}
-
+// Screen - a struct to hold the pixel data for each of the scanlines
 type Screen struct {
-	Pixels [][]uint8
-	Palette ColorPalette
+	Pixels [160][144]Pixel // the pixels for the screen
 }
 
-// MakeNewScreen create a new screen to use
-func MakeNewScreen() *Screen {
-	newScreen := new(Screen)
-	pixels := make([][]uint8, ScreenHeight)
-	for i := range pixels {
-		pixels[i] = make([]uint8, ScreenWidth)
-	}
-
-	newScreen.Pixels = pixels
-	newScreen.Palette = initColorPalette()
-
-	InfoLog.Println("Screen Succesfully set up")
-	return newScreen
-}
-
-
-// initColorPalette initialize the color palette (TODO implement later)
-func initColorPalette() ColorPalette {
-	newPalette := new(ColorPalette)
-	return *newPalette
+// Pixel - a struct to hold pixel data
+type Pixel struct {
+	Color byte // color number for the pixel
+	Palette byte // Value for which palette to use
 }
