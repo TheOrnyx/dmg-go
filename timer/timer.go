@@ -30,12 +30,12 @@ const ( // Clock Speed constants
 	
 )
 
-// Tick tick timer by cycles amnt of m-cycles
+// TickM tick timer by cycles amnt of m-cycles
 // NOTE - only increments by one at the moment as I haven't adapted it
 // TODO - probably switch to just inc by 1 and call this whenever it's needed
 // TODO - add a return for overflow or smth - I like the function pointer idea but will see
 // TODO - check out that silly thing about DIV only being like 14 bits (https://discord.com/channels/465585922579103744/465586075830845475/1184659262421618729)
-func (t *Timer) Tick(cycles int) {
+func (t *Timer) TickM(cycles int) {
 	cycles = cycles*4
 
 	for i := 0; i < cycles; i++ {
@@ -43,7 +43,22 @@ func (t *Timer) Tick(cycles int) {
 		if t.cyclesTilTIMAInterrupt > 0 {
 			t.cyclesTilTIMAInterrupt -= 1
 			if t.cyclesTilTIMAInterrupt == 0 {
-				// TODO - add bit for raising the interrupt flag
+				t.Overflowed = true
+				t.tima = t.tma
+				t.timaReload = true
+			}
+		}
+		t.changeDiv(t.div + 1)
+	}
+}
+
+// TickT tick timer by cycles amount of T-cycles
+func (t *Timer) TickT(cycles int)  {
+	for i := 0; i < cycles; i++ {
+		t.timaReload = false
+		if t.cyclesTilTIMAInterrupt > 0 {
+			t.cyclesTilTIMAInterrupt -= 1
+			if t.cyclesTilTIMAInterrupt == 0 {
 				t.Overflowed = true
 				t.tima = t.tma
 				t.timaReload = true

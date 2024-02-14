@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/veandco/go-sdl2/sdl"
 )
 
@@ -12,72 +13,95 @@ var DebugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
 var WarnLog = log.New(os.Stdout, "[WARN] ", log.LstdFlags)
 var FatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
 
+const (
+	gbScreenWidth = 160
+	gbScreenHeight = 144
+)
+
 type Context struct {
-	Window *sdl.Window
+	Window   *sdl.Window
 	Renderer *sdl.Renderer
 }
 
+var Palette [4]sdl.Color = [4]sdl.Color{
+	sdl.Color{R: 155, G: 188, B: 15, A: 255},
+	sdl.Color{R: 139, G: 172, B: 15, A: 255},
+	sdl.Color{R: 48, G: 98, B: 48, A: 255},
+	sdl.Color{R: 15, G: 56, B: 15, A: 255},
+}
+
 // StartSDLWindowSystem initialize and start running the sdl windowsystem
-func StartSDLWindowSystem(width, height int32)  {
+func InitSDLWindowSystem(width, height int32) *Context {
 	c := new(Context)
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
 		FatalLog.Println("Failed to Init SDL: ", err)
 	}
-	defer sdl.Quit()
 
 	win, err := sdl.CreateWindow("Gameboy-Golor", sdl.WINDOWPOS_UNDEFINED, sdl.WINDOWPOS_UNDEFINED, width, height, sdl.WINDOW_SHOWN)
 	if err != nil {
 		FatalLog.Println("Failed to Create SDL window: ", err)
 	}
 	c.Window = win
-	defer c.Window.Destroy()
 
 	renderer, err := sdl.CreateRenderer(c.Window, -1, sdl.RENDERER_ACCELERATED)
 	if err != nil {
 		FatalLog.Println("Failed to creeate SDL renderer: ", err)
 	}
 	c.Renderer = renderer
-	defer c.Renderer.Destroy()
 	if err = c.Renderer.SetScale(2, 2); err != nil {
 		WarnLog.Println("Failed to scale up Renderer, continuing anyway but might not function")
 	}
 
-	InfoLog.Println("SDL initialized succesfully, beginning main loop")
-	c.mainLoop()
+	InfoLog.Println("SDL initialized succesfully")
+
+	return c
 }
 
-// mainLoop run the mainloop
-func (c *Context) mainLoop()  {
-	running := true
-	for running {
-		c.clearScreen()
-		c.renderScreen()
-		c.Renderer.Present()
-		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-			switch event.(type) {
-			case *sdl.QuitEvent:
-				InfoLog.Println("Exiting SDL window...")
-				running = false
-				break
-			}
-		}
-	}
-}
+// // mainLoop run the mainloop
+// func (c *Context) mainLoop() {
+// 	running := true
+// 	for running {
+// 		c.ClearScreen()
+// 		c.RenderScreen()
+// 		c.Renderer.Present()
+// 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
+// 			switch event.(type) {
+// 			case *sdl.QuitEvent:
+// 				InfoLog.Println("Exiting SDL window...")
+// 				running = false
+// 				break
+// 			}
+// 		}
+// 	}
+// }
 
-// clearScreen clears the screen
-func (c *Context) clearScreen()  {
+// ClearScreen clears the screen
+func (c *Context) ClearScreen() {
 	c.Renderer.SetDrawColor(0, 0, 0, 255)
 	c.Renderer.Clear()
 }
 
-// renderScreen render the gameboy screen to the sdl Window
-func (c *Context) renderScreen()  {
-	//put stuff here to actuall render the screen later
-	c.Renderer.SetDrawColor(212, 202, 25, 255)
-	c.Renderer.FillRect(&sdl.Rect{X: 32, Y: 32, W: 32, H: 32})
-	c.Renderer.FillRect(&sdl.Rect{X: 96, Y: 32, W: 32, H: 32})
-	c.Renderer.FillRect(&sdl.Rect{X: 0, Y: 64, W: 16, H: 64})
-	c.Renderer.FillRect(&sdl.Rect{X: 144, Y: 64, W: 16, H: 64})
-	c.Renderer.FillRect(&sdl.Rect{X: 16, Y: 112, W: 128, H: 16})
+// RenderScreen render the gameboy screen to the sdl Window
+func (c *Context) RenderScreen(screen *ppu.Screen) {
+	for drawY := 0; drawY < gbScreenHeight; drawY++ {
+		for drawX := 0; drawX < gbScreenWidth; drawX++ {
+			
+			c.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.FinalScreen[drawY][drawX].Color]))
+			c.Renderer.DrawPoint(int32(drawX), int32(drawY))
+		}
+	}
+	c.Renderer.Present()
+}
+
+// colorsFromSDLCol return individual colors for a given sdl color
+func colorsFromSDLCol(col sdl.Color) (r, g, b, a uint8) {
+	return col.R, col.G, col.B, col.A
+}
+
+// CloseScreen shut down the screen
+func (c *Context) CloseScreen()  {
+	sdl.Quit()
+	c.Window.Destroy()
+	c.Renderer.Destroy()
 }

@@ -1,6 +1,8 @@
 package mmu
 
 import (
+	"fmt"
+
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/TheOrnyx/gameboy-golor/timer"
@@ -65,7 +67,7 @@ func (io *IO) ReadByte(addr uint16) byte {
 		// 	return 0x90
 		// }
 		return io.LCD.ReadByte(addr)
-		
+
 	case addr == 0xFF4F: // Vram Bank Select (CGB)
 
 	case addr == 0xFF50: // Boot ROM
@@ -90,11 +92,6 @@ func (io *IO) WriteByte(addr uint16, data byte) {
 		io.JoypadInput = data // TODO - actually implement the proper input
 
 	case addr >= 0xFF01 && addr <= 0xFF02: // serial transfer
-		// TODO - maybe put silly debug stuff here
-		// if addr == 0xFF01 {
-		// 	fmt.Println("writing to serial:", data)
-		// 	fmt.Scanln()
-		// }
 		io.SerialTransfer[addr-0xFF01] = data
 
 	case addr >= 0xFF04 && addr <= 0xFF07: // Timer and divider
@@ -131,6 +128,8 @@ type MMU struct {
 	interruptEnabled byte
 	interruptsFlag   byte
 	Cart             *cartridge.Cartridge
+	DebugMode        bool     // whether or not to record debug information
+	DebugRecords     []string // the debug information for read and write operations
 }
 
 // NewMMU create and return a new MMU
@@ -140,46 +139,73 @@ func NewMMU(cart *cartridge.Cartridge, timer *timer.Timer, ppu *ppu.PPU) *MMU {
 	newMMU.PPU = ppu
 	newMMU.IO.TimerControl = timer
 	newMMU.IO.LCD = &ppu.LCD
+	newMMU.IO.BootROMEnabled = 1
+	newMMU.DebugMode = true // TODO - change later
 	return newMMU
 }
 
 // ReadByte read and return the byte located at address addr
 // TODO - finish and check
-func (mmu *MMU) ReadByte(addr uint16) byte {
+func (mmu *MMU) ReadByte(addr uint16) byte {	
 	switch {
 	case addr >= 0x0000 && addr <= 0x7FFF: // Fixed cart bank (don't need to implement switchable as different since mbc handles that)
-		return mmu.Cart.MBC.ReadByte(addr)
+		data := mmu.Cart.MBC.ReadByte(addr)
+		mmu.addReadToDebug(addr, data, "Cart Banks")
+		return data
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video RAM
-		return mmu.PPU.ReadByte(addr)
+		if mmu.IO.LCD.GetStatMode() == 3 {
+			mmu.addReadToDebug(addr, 0xFF, "VRAM (locked)")
+			return 0xFF
+		}
+		
+		data := mmu.PPU.ReadByte(addr)
+		mmu.addReadToDebug(addr, data, "VRAM")
+		return data
 
 	case addr >= 0xA000 && addr <= 0xBFFF: // external ram on cart
 		newAddr := addr - 0xA000
-		return mmu.Cart.MBC.ReadByte(newAddr)
+		data := mmu.Cart.MBC.ReadByte(newAddr)
+		mmu.addReadToDebug(addr, data, "External Cart RAM")
+		return data
 
 	case addr >= 0xC000 && addr <= 0xDFFF: // first work ram bank
 		newAddr := addr - 0xC000
-		return mmu.WRAM.ReadByte(newAddr)
+		data := mmu.WRAM.ReadByte(newAddr)
+		mmu.addReadToDebug(addr, data, "WRAM bank 0")
+		return data
 
 		// Ignoring the 0xE000 -> 0xFDFF - nintendo says not allowed >:(
-
+		
 	case addr == 0xFF0F: // Interrupt Flag
+		mmu.addReadToDebug(addr, mmu.interruptsFlag, "IF")
 		return mmu.interruptsFlag
 
 	case addr == 0xFFFF: // interrupts enabled
+		mmu.addReadToDebug(addr, mmu.interruptEnabled, "IEF")
 		return mmu.interruptEnabled
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // object attribute memory
-		return mmu.PPU.ReadByte(addr)
+		if mmu.IO.LCD.GetStatMode() > 1 {
+			mmu.addReadToDebug(addr, 0xFF, "OAM (locked)")
+			return 0xFF
+		}
+		data := mmu.PPU.ReadByte(addr)
+		mmu.addReadToDebug(addr, data, "OAM")
+		return data
 
 		// ignore 0xFEA0 -> 0xFEFF - nintendo says not allowed again
 
 	case addr >= 0xFF00 && addr <= 0xFF7F: // I/O registers
-		return mmu.IO.ReadByte(addr)
+		data := mmu.IO.ReadByte(addr)
+		mmu.addReadToDebug(addr, data, "I/O")
+		return data
 
 	case addr >= 0xFF80 && addr <= 0xFFFE: // high ram (HRAM)
 		newAddr := addr - 0xFF80
-		return mmu.HRAM[newAddr]
+		data := mmu.HRAM[newAddr]
+		mmu.addReadToDebug(addr, data, "HRAM")
+		return data
 
 	default:
 
@@ -190,34 +216,68 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 // WriteByte write byte value data to location specified in address addr
 func (mmu *MMU) WriteByte(addr uint16, data byte) {
 	switch {
-	case addr >= 0x0000 && addr <= 0x7FFF: // Read from Cart
+	case addr >= 0x0000 && addr <= 0x7FFF: // Write to from Cart
 		mmu.Cart.MBC.WriteByte(addr, data)
+		mmu.addWriteToDebug(addr, data, "Cart")
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video ram
+		if mmu.IO.LCD.GetStatMode() == 3 { // don't write if drawing?
+			return
+		}
 		mmu.PPU.WriteByte(addr, data)
+		mmu.addWriteToDebug(addr, data, "VRAM")
 
 	case addr >= 0xA000 && addr <= 0xBFFF: // External ram on cart
 		newAddr := addr - 0xA000
 		mmu.Cart.MBC.WriteByte(newAddr, data)
+		mmu.addWriteToDebug(addr, data, "External Cart RAM")
 
 	case addr >= 0xC000 && addr <= 0xDFFF: // work ram
 		newAddr := addr - 0xC000
 		mmu.WRAM.WriteByte(newAddr, data)
+		mmu.addWriteToDebug(addr, data, "WRAM")
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // OAM
+		if mmu.IO.LCD.GetStatMode() > 1 {
+			return
+		}
 		mmu.PPU.WriteByte(addr, data)
+		mmu.addWriteToDebug(addr, data, "OAM")
 
 	case addr == 0xFF0F: // interruptsFlag
 		mmu.interruptsFlag = data
+		mmu.addWriteToDebug(addr, data, "IF")
 
 	case addr == 0xFFFF: // interrupts enabled
 		mmu.interruptEnabled = data
+		mmu.addWriteToDebug(addr, data, "IEF")
 
 	case addr >= 0xFF00 && addr <= 0xFF7F: // I/O registers
 		mmu.IO.WriteByte(addr, data)
+		mmu.addWriteToDebug(addr, data, "I/O")
+		
 
 	case addr >= 0xFF80 && addr <= 0xFFFE: // high ram
 		mmu.HRAM[addr-0xFF80] = data
-
+		mmu.addWriteToDebug(addr, data, "HRAM")
+		
 	}
+}
+
+// addWriteToDebug add the write attempt to the DebugRecords if debugMode is on
+func (mmu *MMU) addWriteToDebug(addr uint16, data uint8, location string)  {
+	if !mmu.DebugMode {
+		return
+	}
+
+	mmu.DebugRecords = append(mmu.DebugRecords, fmt.Sprintf("Writing %v to 0x%04X in %s", data, addr, location))
+}
+
+// addReadToDebug add write attempt to debugrecords if debugmode is on
+func (mmu *MMU) addReadToDebug(addr uint16, data uint8, location string)  {
+	if !mmu.DebugMode {
+		return
+	}
+
+	mmu.DebugRecords = append(mmu.DebugRecords, fmt.Sprintf("Read %v from 0x%04X in %s", data, addr, location))
 }

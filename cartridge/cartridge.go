@@ -66,7 +66,7 @@ type Cartridge struct {
 	Type          CartType
 
 	MBC MemoryBankController // the memory bank controller
-	mbcType string // the mbc type as a string (for debugging)
+	MBCType string // the mbc type as a string (for debugging)
 	
 	IsJapanese bool
 	OldLicenseeCode byte // the old licensee code, if 33 then use new licensee code
@@ -76,7 +76,7 @@ type Cartridge struct {
 
 // String string representation of cart info
 func (c *Cartridge) String() string {
-	return fmt.Sprintf("Rom name: %s\nRam Size: %v | ROM Size: %v\nMBC Type: %s", c.Title, c.RAMSize, c.ROMSize, c.mbcType)
+	return fmt.Sprintf("Rom name: %s\nRam Size: %v | ROM Size: %v\nMBC Type: %s", c.Title, c.RAMSize, c.ROMSize, c.MBCType)
 }
 
 // LoadROM load and initialize a ROM based on cart path
@@ -124,13 +124,13 @@ func (c *Cartridge) InitCart(rom []byte) error {
 	switch c.Type.ID {
 	case MBC_0:
 		c.MBC = NewMBC0(rom)
-		c.mbcType = "MBC0"
+		c.MBCType = "MBC0"
 	case MBC_1, MBC_1_RAM:
 		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, false)
-		c.mbcType = "MBC1"
+		c.MBCType = "MBC1"
 	case MBC_1_RAM_BATTERY:
 		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, true)
-		c.mbcType = "MBC1 battery"
+		c.MBCType = "MBC1 battery"
 	}
 
 	return nil
