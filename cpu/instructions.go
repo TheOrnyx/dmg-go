@@ -10,6 +10,8 @@ type Instruction struct {
 	ExecFun     func(cpu *CPU) // the function for the instruction to execute
 }
 
+
+
 ///////////////////////////
 // Instruction Functions //
 ///////////////////////////

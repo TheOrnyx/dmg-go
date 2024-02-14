@@ -48,19 +48,25 @@ type CurrentInstruction struct {
 	Instruction *Instruction
 }
 
+// String string representation of current instruction for debugging
+func (c *CurrentInstruction) String() string {
+	return fmt.Sprintf("OpCode:0x%02X  Name:%s  Operands:%v", c.Instruction.OpCode, c.Instruction.Desc, c.Operands)
+}
+
 // CPU struct to contain information about the CPU
 type CPU struct {
 	Reg                Registers
-	PC                 uint16              // program counter
-	SP                 uint16              // Stack pointer
-	CurrentInstruction *CurrentInstruction //the current instruction to be run
-	MMU                *mmu.MMU            // the memory mapped unit
-	hasJumped          bool                // bool for whether the CPU has just ran a jump instruction, TODO - implement
-	InterruptsEnabled  bool                // bool for whether or not the interrupt flag has been enabled
-	Halted             bool                // whether or not the CPU is halted
-	Timer              *timer.Timer        // the cpu timer
-
-	instrCycles int // the current amount of M-cycles for the instruction
+	PC                 uint16               // program counter
+	SP                 uint16               // Stack pointer
+	CurrentInstruction *CurrentInstruction  //the current instruction to be run
+	MMU                *mmu.MMU             // the memory mapped unit
+	hasJumped          bool                 // bool for whether the CPU has just ran a jump instruction, TODO - implement
+	InterruptsEnabled  bool                 // bool for whether or not the interrupt flag has been enabled
+	Halted             bool                 // whether or not the CPU is halted
+	Timer              *timer.Timer         // the cpu timer
+	debugMode          bool                 // whether or not to record and preserve debug information
+	PrevInstructions   []CurrentInstruction // A list of previously executed instructions (for debugging purposes)
+	instrCycles        int                  // the current amount of M-cycles for the instruction
 }
 
 // String print cpu
@@ -81,6 +87,17 @@ func (cpu *CPU) StringDoctor() string {
 	pcTwo := cpu.MMU.ReadByte(cpu.PC + 2)
 	pcThree := cpu.MMU.ReadByte(cpu.PC + 3)
 	return fmt.Sprintf("%v SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X", cpu.Reg.StringDoctor(), cpu.SP, cpu.PC, pc, pcOne, pcTwo, pcThree)
+}
+
+// GetPCMem get values at next 4 pc addresses in memory and return them
+func (cpu *CPU) GetPCMem() (pc, pcOne, pcTwo, pcThree byte) {
+	cpu.MMU.DebugMode = false // disable so it doesn't report the reads
+	pc = cpu.MMU.ReadByte(cpu.PC)
+	pcOne = cpu.MMU.ReadByte(cpu.PC + 1)
+	pcTwo = cpu.MMU.ReadByte(cpu.PC + 2)
+	pcThree = cpu.MMU.ReadByte(cpu.PC + 3)
+	cpu.MMU.DebugMode = true
+	return
 }
 
 // NewCPU create and return a new cpu
@@ -109,6 +126,7 @@ func (cpu *CPU) Reset() {
 // ResetDebug reset the cpu to debug position (basically skip the boot rom)
 func (cpu *CPU) ResetDebug() {
 	cpu.Reg.A = 0x01
+	cpu.debugMode = true
 
 	cpu.SetFlag(C, true) // TODO - these depend on the checksum in the header
 	cpu.SetFlag(H, true) // TODO - these depend on the checksum in the header
@@ -142,8 +160,8 @@ func (cpu *CPU) ResetFlag(flag int) {
 
 // Tick tick the cpu by cycles amount of M-cycles
 func (cpu *CPU) Tick(cycles int) {
-	cpu.Timer.Tick(cycles)
-	
+	cpu.Timer.TickM(cycles)
+
 	if cpu.Timer.Overflowed { // TODO - maybe move this to function
 		cpu.Timer.Overflowed = false // NOTE - I think this is correct?
 		cpu.RequestInterrupt(Timer)
@@ -155,19 +173,19 @@ func (cpu *CPU) RequestInterrupt(code byte) {
 	interruptFlag := cpu.ReadByte(IFAddr)
 	switch code {
 	case VBlank:
-		cpu.WriteByteToAddr(IFAddr, interruptFlag | vBlankPos)
+		cpu.WriteByteToAddr(IFAddr, interruptFlag|vBlankPos)
 
 	case LCD:
-		cpu.WriteByteToAddr(IFAddr, interruptFlag | lcdPos)
-		
+		cpu.WriteByteToAddr(IFAddr, interruptFlag|lcdPos)
+
 	case Timer:
-		cpu.WriteByteToAddr(IFAddr, interruptFlag | timerPos)
+		cpu.WriteByteToAddr(IFAddr, interruptFlag|timerPos)
 
 	case Serial:
-		cpu.WriteByteToAddr(IFAddr, interruptFlag | serialPos)
+		cpu.WriteByteToAddr(IFAddr, interruptFlag|serialPos)
 
 	case Joypad:
-		cpu.WriteByteToAddr(IFAddr, interruptFlag | joypadPos)
+		cpu.WriteByteToAddr(IFAddr, interruptFlag|joypadPos)
 	}
 }
 
@@ -200,7 +218,7 @@ func (cpu *CPU) Step() int {
 		if cpu.checkInterrupts() {
 			cpu.Tick(5) // tick 5 m-cycles for handling interrupts
 		}
-		
+
 		opCode := cpu.readPC()
 
 		if opCode == 0xCB { // use the prefixed instructions
@@ -209,16 +227,20 @@ func (cpu *CPU) Step() int {
 		} else {
 			cpu.CompileInstruction(InstructionsUnprefixed[opCode])
 		}
-
+		
 		cpu.CurrentInstruction.Instruction.ExecFun(cpu)
-		cpu.instrCycles = cpu.CurrentInstruction.Instruction.Cycles // TODO - check 
+		cpu.instrCycles = cpu.CurrentInstruction.Instruction.Cycles // TODO - check
 
 		cpu.hasJumped = false
+
+		if cpu.debugMode {
+			cpu.PrevInstructions = append(cpu.PrevInstructions, *cpu.CurrentInstruction)
+		}
 
 	} else {
 		interuptEnabled := cpu.ReadByte(IEAddr)
 		interruptFlag := cpu.ReadByte(IFAddr)
-		if interuptEnabled & interruptFlag != 0 {
+		if interuptEnabled&interruptFlag != 0 {
 			cpu.Halted = false
 		}
 	}
