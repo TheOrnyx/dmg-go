@@ -149,3 +149,5 @@ and the last thing I moved was the LCD section of the IO registers as once
 again, much nicer to have in the PPU section
 
 But yeah, things seem to be going smoothly 😎
+
+* <2024-02-01 Thu>Day Eleven

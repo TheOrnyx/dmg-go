@@ -15,13 +15,16 @@ const WinWidth, WinHeight = 160 * WinScalar, 144 * WinScalar
 func main() {
 	// fmt.Println("Starting...")
 	// window.StartSDLWindowSystem(WinWidth, WinHeight)
-	emulator, err := emu.NewEmulator("./Data/Roms/blargg-test-roms/cpu_instrs/cpu_instrs.gb")
+	emulator, err := emu.NewEmulator("./Data/Roms/dmg-acid2.gb")
 	if err != nil {
 		log.Fatal("Error making new emulator:", err)
 	}
 
-	debugger.DebugEmulatorDoctor(emulator)
+	// defer emulator.Renderer.CloseScreen()
+
+	// debugger.DebugEmulatorDoctor(emulator)
 	// debugger.DebugEmulator(emulator)
+	debugger.DebugEmu(emulator)
 	// var running bool = true
 	// for running {
 	// 	emulator.CPU.Step()
