@@ -105,3 +105,17 @@ func (l *LCDReg) WriteByte(addr uint16, data byte) {
 		log.Println("Unkown write to LCD IO at unkown addr:", addr)
 	}
 }
+
+// getStatMode get the current mode from the stat register
+func (l *LCDReg) GetStatMode() byte {
+	return (l.Stat & 0x03)
+}
+
+// controlObjSize return the object size based on the control flag bit 
+func (l *LCDReg) controlObjSize() byte {
+	if (l.Control >> 2) & 0x01 == 0x01 {
+		return 16
+	} else {
+		return 8
+	}
+}
