@@ -8,9 +8,6 @@ import (
 	"github.com/veandco/go-sdl2/sdl"
 )
 
-var InfoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
-var DebugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
-var WarnLog = log.New(os.Stdout, "[WARN] ", log.LstdFlags)
 var FatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
 
 const (
@@ -31,7 +28,7 @@ var Palette [4]sdl.Color = [4]sdl.Color{
 }
 
 // StartSDLWindowSystem initialize and start running the sdl windowsystem
-func InitSDLWindowSystem(width, height int32) *Context {
+func InitSDLWindowSystem(width, height, scale int32) *Context {
 	c := new(Context)
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {
@@ -49,11 +46,10 @@ func InitSDLWindowSystem(width, height int32) *Context {
 		FatalLog.Println("Failed to creeate SDL renderer: ", err)
 	}
 	c.Renderer = renderer
-	if err = c.Renderer.SetScale(2, 2); err != nil {
-		WarnLog.Println("Failed to scale up Renderer, continuing anyway but might not function")
+	if err = c.Renderer.SetScale(float32(scale), float32(scale)); err != nil {
+		log.Println("Failed to scale up Renderer, continuing anyway but might not function")
 	}
 
-	InfoLog.Println("SDL initialized succesfully")
 
 	return c
 }
