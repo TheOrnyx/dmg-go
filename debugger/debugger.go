@@ -34,6 +34,10 @@ type Debugger struct {
 	Emu         *emulator.Emulator
 	ActivePanel int // the active panel being used
 	Screen      tcell.Screen
+	RunNormal   bool // whether or not the emulator should run at full normal speed rather than stepping through each instruction
+	running bool // whether the main loop should run
+	fullSpeed bool // whether the main loop should run at full speed rather than step by step
+	polling bool // whether a goroutine is polling events (used to prevent more than one goroutine being created)
 }
 
 // DebugEmulatorDoctor run and debug emulator outputting in doctor format
@@ -89,7 +93,7 @@ func DebugEmulator(emu *emulator.Emulator) {
 // DebugEmu debug and run an emulator with the TUI
 func DebugEmu(emu *emulator.Emulator) {
 	emu.CPU.ResetDebug()
-	d := Debugger{Emu: emu, ActivePanel: 1}
+	d := Debugger{Emu: emu, ActivePanel: 0}
 	s, err := initTcell()
 	if err != nil {
 		log.Fatal(err)
@@ -106,35 +110,59 @@ func DebugEmu(emu *emulator.Emulator) {
 	}
 	defer quit()
 
-	running := true
+	d.running = true
+	d.fullSpeed = true
 
-	for running {
+	for d.running {
 		updateDimensions(d.Screen)
 		d.Screen.Show()
 		d.Screen.Clear()
 
-		ev := d.Screen.PollEvent()
-		switch ev := ev.(type) {
-		case *tcell.EventKey:
-			switch ev.Key() {
-			case tcell.KeyEscape, tcell.KeyCtrlC:
-				running = false
-
-			case tcell.KeyTAB:
-				d.switchPanel(d.ActivePanel + 1)
-			case tcell.KeyBacktab:
-				d.switchPanel(d.ActivePanel - 1)
-
-			default: // search for runes instead
-				switch ev.Rune() {
-				case ' ':
-					d.Emu.Step()
-				}
+		if !d.fullSpeed {
+			ev := d.Screen.PollEvent()
+			d.handleKeys(ev)
+		} else {
+			if !d.polling {
+				d.polling = true
+				go func() {
+					ev := s.PollEvent()
+					d.handleKeys(ev)
+				}()
 			}
 		}
 
+		d.Emu.Step()
+		// time.Sleep(time.Nanosecond)
+
 		d.DrawUI()
 	}
+}
+
+// handleKeys handle inputs and stuff
+func (d *Debugger) handleKeys(ev tcell.Event) {
+	switch ev := ev.(type) {
+	case *tcell.EventKey:
+		switch ev.Key() {
+		case tcell.KeyEscape, tcell.KeyCtrlC:
+			d.running = false
+
+		case tcell.KeyTAB:
+			d.switchPanel(d.ActivePanel + 1)
+		case tcell.KeyBacktab:
+			d.switchPanel(d.ActivePanel - 1)
+
+		default: // search for runes instead
+			switch ev.Rune() {
+			case ' ':
+				if !d.fullSpeed {
+					d.Emu.Step()
+				}
+			case 's':
+				d.fullSpeed = !d.fullSpeed
+			}
+		}
+	}
+	d.polling = false
 }
 
 // DrawUI draw the UI for the debugger
@@ -143,7 +171,7 @@ func (d *Debugger) DrawUI() {
 	drawBox(d.Screen, 0, 0, maxX, topY2, defStyle)        // the top info box
 	drawBox(d.Screen, 0, topY2+1, leftX2, maxY, defStyle) // the left box
 	// drawBox(d.Screen, leftX2+2, topY2+1, maxX, maxY, defStyle) // the main box
-	
+
 	// Draw the menu labels
 	midY := maxY / 2
 	startY := midY - 1 // the Y value to start with
@@ -198,9 +226,11 @@ func (d *Debugger) drawCPUDataPanel(sepY int) {
 	firstLine := fmt.Sprintf("PC:0x%04X SP:0x%04X RegF:%v", cpu.PC, cpu.SP, cpu.Reg.F.String())
 	secondLine := fmt.Sprintf("Regs:%v", cpu.Reg.String())
 	thirdLine := fmt.Sprintf("PCMem: %v, %v, %v, %v", pc, pcOne, pcTwo, pcThree)
+	fourthLine := fmt.Sprintf("Timer: %v, FrameCycles: %v", d.Emu.Timer, d.Emu.CycleCount)
 	drawText(d.Screen, startX, startY, maxX-1, endY, defStyle, firstLine)
 	drawText(d.Screen, startX, startY+1, maxX-1, endY, defStyle, secondLine)
 	drawText(d.Screen, startX, startY+2, maxX-1, endY, defStyle, thirdLine)
+	drawText(d.Screen, startX, startY+3, maxX-1, endY, defStyle, fourthLine)
 }
 
 // drawMMUPanel draw the MMU panel
@@ -217,4 +247,9 @@ func (d *Debugger) drawMMUPanel() {
 	for i := range clampedPrev {
 		drawText(d.Screen, startX, startY+i, maxX-2, endY, defStyle, clampedPrev[i])
 	}
+}
+
+// drawPPUPanel draw the PPU panel
+func (d *Debugger) drawPPUPanel() {
+
 }
