@@ -2,7 +2,6 @@ package emulator
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
@@ -10,13 +9,9 @@ import (
 	"github.com/TheOrnyx/gameboy-golor/mmu"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/TheOrnyx/gameboy-golor/timer"
-	"github.com/TheOrnyx/gameboy-golor/window"
 )
 
-var InfoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
-var DebugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
-var WarnLog = log.New(os.Stdout, "[WARN] ", log.LstdFlags)
-var FatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
+const FrameRate = 60
 
 type Screen interface {
 	ClearScreen()
@@ -30,10 +25,11 @@ type Emulator struct {
 	PPU *ppu.PPU
 	Timer *timer.Timer
 	Renderer Screen
+	CycleCount int // the cycle count in M-Cycles
 }
 
 // NewEmulator Start a new emulator, load the rom in the given path and return the emulator instance
-func NewEmulator(romPath string) (*Emulator, error) {
+func NewEmulator(romPath string, renderer Screen) (*Emulator, error) {
 	newEmu := new(Emulator)
 	rom, err := os.ReadFile(romPath)
 	if err != nil {
@@ -46,16 +42,18 @@ func NewEmulator(romPath string) (*Emulator, error) {
 	}
 
 	newEmu.Timer = new(timer.Timer)
+	newEmu.Renderer = renderer
 
-	newEmu.PPU = ppu.NewPPU(newEmu.Timer)
+	newEmu.PPU = ppu.NewPPU(newEmu.Timer, newEmu.RequestInterrupt)
 	newEmu.MMU = mmu.NewMMU(cart, newEmu.Timer, newEmu.PPU)
 	newEmu.CPU, _ = cpu.NewCPU(newEmu.MMU, newEmu.Timer)
 
-	if false {
-		newEmu.Renderer = window.InitSDLWindowSystem(320, 288)
-	}
-
 	return newEmu, nil
+}
+
+// RequestInterrupt request interrupt on CPU (used for PPU)
+func (e *Emulator) RequestInterrupt(code byte)  {
+	e.CPU.RequestInterrupt(code)
 }
 
 // RunEmulator run the emulator normally
@@ -65,7 +63,17 @@ func (e *Emulator) RunEmulator()  {
 
 // Step step the emulator by one
 func (e *Emulator) Step()  {
-	e.CPU.Step()
+	mCycles := e.CPU.Step()
+	tCycles := mCycles*4
+	e.Timer.TickM(mCycles)
+	e.PPU.Step(uint16(tCycles))
+	e.CycleCount += mCycles
+
+	if e.CycleCount >= (cpu.ClockSpeed/ FrameRate) { // finish frame
+		e.CycleCount = 0
+		e.RenderScreen()
+		e.PPU.Screen.Reset()
+	}
 }
 
 // RenderScreen render the screen
