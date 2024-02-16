@@ -149,5 +149,13 @@ and the last thing I moved was the LCD section of the IO registers as once
 again, much nicer to have in the PPU section
 
 But yeah, things seem to be going smoothly 😎
-
-* <2024-02-01 Thu>Day Eleven
+ 
+* Day ??? <2024-02-16 Fri>
+Okay so it's been... a while, I've been working on this quite constantly but
+progress has been slow. I moved to the PPU and it confused the shit out of me so
+I spent the like 2 weeks working on other parts, writing a new cool debugger
+(that's slow as shit atm) and trying (and failing) to implement the PPU.
+And so we come to today, after heappssss of debugging and stuff I found a dudes
+emulator and basically copied his technique and I've got stuff displaying!
+It's a bit munched atm but I'll fix it later, I'm just happy I got something up.
+Now onto the joypad (PPu can be fixed later :3)
