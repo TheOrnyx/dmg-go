@@ -25,7 +25,7 @@ func (m *MBC0) ReadByte(addr uint16) byte {
 
 // WriteByte write given data to addr
 func (m *MBC0) WriteByte(addr uint16, data byte)  {
-	log.Println("Unable to write to MBC0, no RAM to write to")
+	// log.Println("Unable to write to MBC0, no RAM to write to")
 }
 
 // switchROMBank does nothing for MBC0
