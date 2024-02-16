@@ -154,7 +154,7 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return data
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video RAM
-		if mmu.IO.LCD.GetStatMode() == 3 {
+		if mmu.IO.LCD.StatMode() == 3 {
 			mmu.addReadToDebug(addr, 0xFF, "VRAM (locked)")
 			return 0xFF
 		}
@@ -186,7 +186,7 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return mmu.interruptEnabled
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // object attribute memory
-		if mmu.IO.LCD.GetStatMode() > 1 {
+		if mmu.IO.LCD.StatMode() > 1 {
 			mmu.addReadToDebug(addr, 0xFF, "OAM (locked)")
 			return 0xFF
 		}
@@ -221,7 +221,7 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "Cart")
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video ram
-		if mmu.IO.LCD.GetStatMode() == 3 { // don't write if drawing?
+		if mmu.IO.LCD.StatMode() == 3 { // don't write if drawing?
 			return
 		}
 		mmu.PPU.WriteByte(addr, data)
@@ -238,7 +238,7 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "WRAM")
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // OAM
-		if mmu.IO.LCD.GetStatMode() > 1 {
+		if mmu.IO.LCD.StatMode() > 1 {
 			return
 		}
 		mmu.PPU.WriteByte(addr, data)
@@ -247,6 +247,10 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 	case addr == 0xFF0F: // interruptsFlag
 		mmu.interruptsFlag = data
 		mmu.addWriteToDebug(addr, data, "IF")
+
+	case addr == 0xFF46: // DMA OAM transfer
+		mmu.DMATransfer(data)
+		mmu.addWriteToDebug(addr, data, "DMA OAM Transfer")
 
 	case addr == 0xFFFF: // interrupts enabled
 		mmu.interruptEnabled = data
@@ -261,6 +265,15 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.HRAM[addr-0xFF80] = data
 		mmu.addWriteToDebug(addr, data, "HRAM")
 		
+	}
+}
+
+// DMATransfer perform an OAM DMA transfer
+// TODO - maybe implement the timings if needed
+func (mmu *MMU) DMATransfer(data byte)  {
+	var addr uint16 = uint16(data) << 8
+	for i := uint16(0); i < 0xA0; i++ {
+		mmu.PPU.WriteByte(0xFE00+i, mmu.ReadByte(addr + i))
 	}
 }
 
