@@ -34,6 +34,10 @@ const ( // the interrupt constants
 	serialPos = 0x08
 	joypadPos = 0x10
 
+
+)
+
+const (
 	// Interrupt request codes
 	VBlank = iota
 	LCD
@@ -212,11 +216,13 @@ func (cpu *CPU) SetFlag(flag int, state bool) {
 }
 
 // Step the step function for the cpu
+// Return cycle amount in M-cycles
 func (cpu *CPU) Step() int {
 	cpu.instrCycles = 1
 	if !cpu.Halted {
 		if cpu.checkInterrupts() {
-			cpu.Tick(5) // tick 5 m-cycles for handling interrupts
+			cpu.instrCycles = 5
+			// cpu.Tick(5) // tick 5 m-cycles for handling interrupts
 		}
 
 		opCode := cpu.readPC()
@@ -245,8 +251,8 @@ func (cpu *CPU) Step() int {
 		}
 	}
 
-	cpu.Tick(cpu.instrCycles)
-	return 0
+	// cpu.Tick(cpu.instrCycles)
+	return cpu.instrCycles
 }
 
 // checkInterrupts check for interrupts and return true if should interrupt
