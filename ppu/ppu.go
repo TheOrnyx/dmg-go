@@ -12,6 +12,12 @@ import (
 // PPU stuff //
 ///////////////
 
+const (
+	// Interrupt request codes
+	vBlankInt = iota
+	lcdInt
+)
+
 type VideoRam struct {
 	RAM [0x2000]byte
 }
@@ -25,6 +31,7 @@ func (v *VideoRam) ReadByte(addr uint16) byte {
 // WriteByte write given data to addr
 func (v *VideoRam) WriteByte(addr uint16, data uint8) {
 	v.RAM[addr] = data
+
 }
 
 type OAM struct {
@@ -41,49 +48,30 @@ func (o *OAM) WriteByte(addr uint16, data byte) {
 	o.Data[addr] = data
 }
 
-// getSprite get sprite information at given 0-based index and return it
-func (p *PPU) getSprite(index uint16) Sprite {
-	startAddr := 0xFE00 + (4 * index)
-	flagByte := p.ReadByte(startAddr + 3)
-
-	return Sprite{
-		PosY:      p.ReadByte(startAddr),
-		PosX:      p.ReadByte(startAddr + 1),
-		Index:     p.ReadByte(startAddr + 2),
-		FlagsByte: flagByte,
-		Flags:     getFlagsFromByte(flagByte),
-	}
-}
-
 // PPU Modes Consts
 const (
-	OAMScan = 2 // OAM scan mode
-	Drawing = 3 // Drawing mode
-	HBlank  = 0 // H-blank mode
-	VBlank  = 1 // V-blank mode
+	OAMScanMode = 2 // OAM scan mode
+	DrawMode    = 3 // Drawing mode
+	HBlankMode  = 0 // H-blank mode
+	VBlankMode  = 1 // V-blank mode
 )
 
 type PPU struct {
-	VRAM       VideoRam
-	OAM        OAM // the Object Attribute Memory
-	LCD        LCDReg
-	timer      *timer.Timer
-	Screen     Screen   // The screen to store the scanlines in
-	Fetcher    Fetcher  // the Pixel FIFO fetcher
-	bgTileMap  uint16   // the tilemap to use for background tiles
-	winTileMap uint16   // the tilemap to use for window tiles
-	tileData   uint16   // the tileData address mode to use
-	drawX      uint8    // the current X position relative to the LCD to draw to
-	cycles     uint16   // the current cycles for the current scanline
-	sprites    []Sprite // Sprites from OAM for current scanline
+	VRAM             VideoRam
+	OAM              OAM // the Object Attribute Memory
+	LCD              LCDReg
+	WLY              byte            // the LY for the window
+	RequestInterrupt func(code byte) // function pointer to request interrupts
+	timer            *timer.Timer
+	Screen           Screen // The screen to store the scanlines in
+	cycles           uint16 // the current cycles for the current scanline
 }
 
 // NewPPU create and return a new ppu
-func NewPPU(timer *timer.Timer) *PPU {
+func NewPPU(timer *timer.Timer, requestInterrupt func(code byte)) *PPU {
 	ppu := new(PPU)
 	ppu.timer = timer
-	ppu.Fetcher = Fetcher{ppu: ppu}
-
+	ppu.RequestInterrupt = requestInterrupt
 	return ppu
 }
 
@@ -118,99 +106,118 @@ func (p *PPU) WriteByte(addr uint16, data byte) {
 // setPPUMode set the current ppu mode in the STAT register
 func (p *PPU) setPPUMode(mode int) {
 	switch mode {
-	case HBlank:
+	case HBlankMode:
 		p.LCD.Stat = (p.LCD.Stat & 0xFC)
-	case VBlank:
+		if p.LCD.modeZeroInt() {
+			p.RequestInterrupt(lcdInt)
+		}
+
+	case VBlankMode:
 		p.LCD.Stat = (p.LCD.Stat & 0xFC) | 0x01
-	case OAMScan:
+		p.RequestInterrupt(vBlankInt)
+		if p.LCD.modeOneInt() {
+			p.RequestInterrupt(lcdInt)
+		}
+
+	case OAMScanMode:
 		p.LCD.Stat = (p.LCD.Stat & 0xFC) | 0x02
-	case Drawing:
+		if p.LCD.modeTwoInt() {
+			p.RequestInterrupt(lcdInt)
+		}
+
+	case DrawMode:
 		p.LCD.Stat = (p.LCD.Stat & 0xFC) | 0x03
 	}
 }
 
-// isLCDEnabled check if the LCD is enabled and return true if it is
-func (p *PPU) isLCDEnabled() bool {
-	return (p.LCD.Control>>7)&0x01 == 0x01
+// Mode get the current PPU Mode
+func (p *PPU) Mode() byte {
+	return p.LCD.StatMode()
+}
+
+// checkLYCInterrupt Check and set LYC value and set LYCInterrupt as well
+func (p *PPU) checkLYCInterrupt() {
+	var equal bool
+
+	if p.LCD.LY == p.LCD.LYC {
+		p.LCD.Stat |= 0x04 // TODO - check
+		equal = true
+	} else {
+		p.LCD.Stat &= 0xFB
+	}
+
+	if equal && (p.LCD.Stat>>6)&0x01 == 0x01 {
+		p.RequestInterrupt(vBlankInt)
+	}
 }
 
 // String get debug string representation of the PPU
 func (p *PPU) String() string {
 	var mode string
-	switch {
-	case p.LCD.LY >= 144:
-		mode = "VBLANK MODE"
-	case p.cycles <= 80:
-		mode = "Scan OAM Mode"
-	case p.drawX < 160:
-		mode = "Draw mode"
-	default:
-		mode = "Hblank mode"
+	switch p.Mode() {
+	case OAMScanMode:
+		mode = "OAM Scan Mode"
+	case HBlankMode:
+		mode = "HBlank Mode"
+	case DrawMode:
+		mode = "Draw Mode"
+	case VBlankMode:
+		mode = "VBlank Mode"
 	}
 
-	return fmt.Sprintf("Currently in %v, drawX:%v, LY:%v, Cycles:%v", mode, p.drawX, p.LCD.LY, p.cycles)
-}
-
-// reloadInfo check and set appropriate variable information
-// Such as the tilemap and tiledata
-func (p *PPU) reloadInfo() {
-	if (p.LCD.Control>>3)&0x01 == 0x01 {
-		p.bgTileMap = 0x9C00
-	} else {
-		p.bgTileMap = 0x9800
-	}
-
-	if (p.LCD.Control>>6)&0x01 == 0x01 {
-		p.winTileMap = 0x9C00
-	} else {
-		p.winTileMap = 0x9800
-	}
-
-	if (p.LCD.Control>>4)&0x01 == 0x01 {
-		p.tileData = 0x8000
-	} else {
-		p.tileData = 0x8800
-	}
+	return fmt.Sprintf("Currently in %v, LY:%v, Cycles:%v", mode, p.LCD.LY, p.cycles)
 }
 
 // Step step the PPU and draw appropriate things
-func (p *PPU) Step() {
-	if p.cycles >= 456 {
-		p.nextScanline()
-	}
-	p.reloadInfo()
+func (p *PPU) Step(cycles uint16) {
+	p.cycles += cycles
+	p.checkLYCInterrupt()
 
-	if p.LCD.LY >= 144 {
-		p.setPPUMode(VBlank)
-		p.vBlank()
-	} else if p.cycles <= 80 {
-		p.setPPUMode(OAMScan)
-		p.scanOAM(p.LCD.LY)
-	} else if p.drawX < 160 {
-		p.setPPUMode(Drawing)
-		p.drawMode(p.LCD.LY)
-	} else {
-		p.setPPUMode(HBlank)
-		p.hBlank()
+	if p.cycles >= 456 { // go to next scanline
+		p.cycles -= 456
+
+		p.LCD.LY = (p.LCD.LY + 1) % 154
+		p.checkLYCInterrupt()
+
+		// vblank
+		if p.LCD.LY >= 144 && p.Mode() != VBlankMode {
+			p.setPPUMode(VBlankMode)
+
+			p.WLY = 0
+
+			if p.LCD.modeOneInt() {
+				p.RequestInterrupt(lcdInt) // request lcd interrupt
+			}
+			p.RequestInterrupt(vBlankInt)
+		}
 	}
 
-	if p.LCD.LY == p.LCD.LYC {
-		p.LCD.Stat |= 0x04 // TODO - check
+	if p.LCD.LY < 144 {
+		switch {
+		case (p.cycles <= 80) && p.Mode() != OAMScanMode:
+			// p.Screen.Reset() // TODO - CHECK THIS
+			p.setPPUMode(OAMScanMode)
+
+		case (p.cycles >= 81 && p.cycles <= 252) && p.Mode() != DrawMode: // NOTE - idk why 252, that's what a guy did
+			p.setPPUMode(DrawMode)
+
+		case (p.cycles >= 253 && p.cycles <= 455) && p.Mode() != HBlankMode:
+			p.setPPUMode(HBlankMode)
+			p.renderScanline()
+		}
 	}
 }
 
-// nextScanline reset specific fields and set stuff according to scanline
-// Also sets stuff to the next Frame if needed
-func (p *PPU) nextScanline() {
-	p.drawX = 0
-	p.setPPUMode(OAMScan)
-	p.LCD.LY++
-	if p.LCD.LY >= 154 {
-		p.LCD.LY = 0
+// renderScanline create the individual scanlines for the specific layers and combine them onto the main screen
+func (p *PPU) renderScanline() {
+	if !p.LCD.isLcdOn() {
+		return
 	}
-	p.cycles = 0
-	p.sprites = []Sprite{}
-	p.Fetcher.posX = 0 // TODO - check
+
+	p.DrawBGScanline()
+	p.DrawWinScanline()
+	p.DrawObjectScanline()
+	p.Screen.CombineLine(int(p.LCD.LY))
 }
 
 // tick tick timer by cycles amount and increase field
@@ -219,54 +226,182 @@ func (p *PPU) tick(cycles int) {
 	p.timer.TickT(cycles)
 }
 
-// scanOAM scan the OAM for a max of 10 sprites for the scanline and add them to the spritelist if applicable
-// TODO - maybe do the like sprite validity check in the getSprite function cuz it'd be more optimized idk
-func (p *PPU) scanOAM(scanY uint8) {
-	var spriteHeight = p.LCD.controlObjSize()
+// getSprite get sprite information at given 0-based index and return it
+func (p *PPU) getSprite(index uint16) Sprite {
+	startAddr := 0xFE00 + (4 * index)
 
-	p.tick(2)
-	if len(p.sprites) >= 10 {
+	return Sprite{
+		PosY:  p.ReadByte(startAddr),
+		PosX:  p.ReadByte(startAddr + 1),
+		Index: p.ReadByte(startAddr + 2),
+		Flags: p.ReadByte(startAddr + 3),
+		Position: byte(index),
+	}
+}
+
+// scanOAM scan the OAM and return a max of 10 sprites for the scanline
+func (p *PPU) scanOAM(scanY uint8) []Sprite {
+	var spriteHeight = p.LCD.objSize()
+	var sprites []Sprite
+
+	for i := range uint16(40) { // scan all objects in OAM
+		if len(sprites) >= 10 {
+			break
+		}
+		
+		sprite := p.getSprite(i)
+		if scanY+16 >= sprite.PosY && scanY+16 < sprite.PosY+spriteHeight {
+			sprites = append(sprites, sprite)
+		}
+	}
+
+	return sprites
+}
+
+// DrawBGScanline draw a background scanline and push it to the screen layer
+func (p *PPU) DrawBGScanline() {
+	if !p.LCD.EnableBGWin() {
 		return
 	}
 
-	sprite := p.getSprite(uint16(len(p.sprites)))
-	if scanY+16 >= sprite.PosY && scanY+16 < sprite.PosY+spriteHeight {
-		p.sprites = append(p.sprites, sprite)
+	tileMapAddr := p.LCD.BGTileMap()
+
+	for col := range uint8(160) {
+		x := col + p.LCD.SCX
+		y := p.LCD.LY + p.LCD.SCY
+		pixelVal := p.getTilePixel(x, y, tileMapAddr)
+		color := (p.LCD.BGP >> (pixelVal * 2)) & 0x03
+		p.Screen.Background[p.LCD.LY][col] = Pixel{Color: color, Opaque: true}
 	}
 }
 
-// hBlank basically just ticks the timer to get the scanlines cycles up to 456
-// cycles is the amount of cycles this scanline has used so far
-func (p *PPU) hBlank() {
-
-	p.tick(1)
-}
-
-// vBlank run the vblank mode for a single scanline (meant to be used in a for loop for the 10 scanlines)
-func (p *PPU) vBlank() {
-	p.tick(1)
-}
-
-// drawMode the drawing mode, return number of cycles the draw mode took
-func (p *PPU) drawMode(scanY uint8) {
-
-	p.Fetcher.Step()
-	p.tick(2)
-
-	if len(p.Fetcher.FIFO.Pixels) != 0 {
-		popPixel := p.Fetcher.FIFO.Pixels[0]
-		p.Fetcher.FIFO.Pixels = p.Fetcher.FIFO.Pixels[1:]
-		p.Screen.FinalScreen[scanY][p.drawX] = popPixel
-		fmt.Println(popPixel)
-		fmt.Println(p.Fetcher.FIFO.Pixels)
-		p.drawX++
+// DrawWinScanline draw a window scanline and push it to the screen layer
+func (p *PPU) DrawWinScanline() {
+	if !p.LCD.WindowEnabled() || p.LCD.LY < p.LCD.WY {
+		return
 	}
 
-	// TODO - implement this properly
+	tilemapAddr := p.LCD.WinTileMap()
+	var pixelDrawn bool
+
+	for x := range uint8(160) {
+		winX := 0 - (int(p.LCD.WX) - 7) + int(x)
+
+		// don't draw if pixel off screen
+		if winX < 0 || winX >= 160 {
+			continue
+		}
+
+		pixel := p.getTilePixel(uint8(winX), p.WLY, tilemapAddr)
+
+		p.Screen.Window[p.LCD.LY][x] = Pixel{Color: pixel, Opaque: true}
+		pixelDrawn = true
+	}
+
+	if pixelDrawn {
+		p.WLY += 1
+	}
 }
 
-// getTileIndex get specific background tile index based on x and y coordinate
-func (p *PPU) getBackgTileIndex(x, y uint8) uint8 {
-	startAddr := p.bgTileMap + (32 * uint16(y))
-	return p.ReadByte(startAddr + uint16(x))
+// DrawObjectScanline draw a scanline for the objects and push to object layer in the screen
+// TODO - maybe split into seperate functions and simplify
+func (p *PPU) DrawObjectScanline() {
+	if !p.LCD.objEnabled() {
+		return
+	}
+
+	sprites := p.scanOAM(p.LCD.LY)
+
+	for i := range sprites {
+		sprite := sprites[i]
+
+		var spriteNum uint16
+		if p.LCD.objSize() == 16 {
+			spriteNum = uint16(sprite.Index) & 0xFE
+		} else {
+			spriteNum = uint16(sprite.Index) & 0xFF
+		}
+		
+		var spriteY uint16
+		height := uint16(p.LCD.objSize())
+		
+		if sprite.yFlip() {
+			spriteY = (height-1 - (uint16(p.LCD.LY) - (uint16(sprite.PosY) - 16))) // TODO - very gross, check
+		} else {
+			spriteY = (uint16(p.LCD.LY) - (uint16(sprite.PosY) - 16))
+		}
+
+		spriteDataAddr := 0x8000 + (spriteNum * 16) + (spriteY * 2)
+		spriteDataLow := p.ReadByte(spriteDataAddr)
+		spriteDataHigh := p.ReadByte(spriteDataAddr+1)
+
+		for pixel := range uint8(7) {
+			posX := sprite.PosX - 8 // the relative posX
+			outOfRangeLeft := (int(sprite.PosX) - 8) + int(pixel) < 0
+			outOfRangeRight := (sprite.PosX - 8) + pixel >= 160
+			if outOfRangeLeft || outOfRangeRight {
+				continue
+			}
+
+			coverPixel := !p.Screen.Background[p.LCD.LY][posX].Opaque || !p.Screen.Window[p.LCD.LY][posX].Opaque
+			if !p.LCD.EnableBGWin() && sprite.priority() && coverPixel {
+				continue
+			}
+
+			var pixelNum byte = pixel
+			if sprite.xFlip() {
+				pixelNum = 7-pixel
+			}
+
+			pixelVal := getPixel(spriteDataLow, spriteDataHigh, pixelNum)
+			color := (p.getDMGPalette(&sprite) >> (pixelVal * 2)) & 0x03
+			p.Screen.Objects[p.LCD.LY][posX+pixel] = Pixel{Color: color, Opaque: color != 0}
+		}
+	}
+}
+
+// getDMGPalette get the actual palette data for a given obj
+func (p *PPU) getDMGPalette(sprite *Sprite) byte {
+	if sprite.dmgPalette() {
+		return p.LCD.OBP1
+	}
+
+	return p.LCD.OBP0
+}
+
+// getTilePixel get the pixel value for the pixel at x and y based on tileMapAddr
+// Heavily based on https://github.com/ablakey/gameboy/blob/dc2abcae57f271cb7873f9fd5cc77cd6e30fb4d1/src/guest/systems/ppu.rs#L5
+// As I'm too stupid to understand myself
+func (p *PPU) getTilePixel(x, y uint8, tileMapAddr uint16) uint8 {
+	tileRowNum := y / 8
+	tileColNum := x / 8
+	tileNum := uint16(tileRowNum)*32 + uint16(tileColNum)
+
+	tileDataNum := p.ReadByte(tileMapAddr + tileNum)
+	tileDataAddr := getTileDataAddress(p.LCD.TileDataAddrMode(), tileDataNum)
+
+	pixelRowNum := y % 8
+	pixelColNum := x % 8
+
+	tileRowIndex := tileDataAddr + (uint16(pixelRowNum) * 2)
+	tileDataLow := p.ReadByte(tileRowIndex)
+	tileDataHigh := p.ReadByte(tileRowIndex + 1)
+
+	return getPixel(tileDataLow, tileDataHigh, pixelColNum)
+}
+
+// getPixel get the two bits for the color pixel based on the two bytes and the pixel num
+func getPixel(tileLow, tileHigh, pixelNum uint8) uint8 {
+	pixel0 := (tileLow >> (7 - pixelNum)) & 0x01
+	pixel1 := (tileHigh >> (7 - pixelNum)) & 0x01
+	return (pixel1 << 1) + pixel0
+}
+
+// getTileDataAddress get the address for the tile data based on the addressing mode
+func getTileDataAddress(baseAddress uint16, tileNum uint8) uint16 {
+	if baseAddress == 0x8800 {
+		return baseAddress + (uint16(int16(int8(tileNum))+128) * 16)
+	}
+
+	return baseAddress + (uint16(tileNum) * 16)
 }

@@ -106,16 +106,80 @@ func (l *LCDReg) WriteByte(addr uint16, data byte) {
 	}
 }
 
+// isLcdOn return whether or not the LCD is turned on
+func (l *LCDReg) isLcdOn() bool {
+	return (l.Control >> 7) & 0x01 == 0x01
+}
+
+// objEnabled return whether or not sprites are enabled
+// Based bit 1 in Control
+func (l *LCDReg) objEnabled() bool {
+	return (l.Control >> 1) & 0x01 == 0x01
+}
+
+// EnableBGWin return whether or not to draw the background and window
+// TODO - if convert to CGB make sure to convert this to priority
+func (l *LCDReg) EnableBGWin() bool {
+	return l.Control & 0x01 == 0x01
+}
+
+// WindowEnabled return whether or not the window bit in Control is set
+// in DMG this is overwritten by the bit 0 (BG/Win enable)
+func (l *LCDReg) WindowEnabled() bool {
+	if !l.EnableBGWin() {
+		return false
+	}
+
+	return (l.Control >> 5) & 0x01 == 0x01
+}
+
 // getStatMode get the current mode from the stat register
-func (l *LCDReg) GetStatMode() byte {
+func (l *LCDReg) StatMode() byte {
 	return (l.Stat & 0x03)
 }
 
-// controlObjSize return the object size based on the control flag bit 
-func (l *LCDReg) controlObjSize() byte {
+// modeZeroInt return whether or not the mode 0 interrupt bit is set in the Stat
+func (l *LCDReg) modeZeroInt() bool {
+	return (l.Stat >> 3) & 0x01 == 0x01
+}
+// modeOneInt return whether or not the mode 1 interrupt bit  is set in the Stat
+func (l *LCDReg) modeOneInt() bool {
+	return (l.Stat >> 3) & 0x01 == 0x01
+}
+
+// modeTwoInt return whether or not the mode 2 interrupt bit is set in the Stat
+func (l *LCDReg) modeTwoInt() bool {
+	return (l.Stat >> 3) & 0x01 == 0x01
+}
+
+// objSize return the object size from the control flag bit 
+func (l *LCDReg) objSize() byte {
 	if (l.Control >> 2) & 0x01 == 0x01 {
 		return 16
 	} else {
 		return 8
+	}}
+
+// TileDataAddrMode get the current addressing mode for the tile data
+func (l *LCDReg) TileDataAddrMode() uint16 {
+	if (l.Control>>4)&0x01 == 0x01 {
+		return 0x8000
 	}
+	return 0x8800
+}
+
+// WinTileMap get the tile map area for the window to use
+func (l *LCDReg) WinTileMap() uint16 {
+	if (l.Control>>6)&0x01 == 0x01 {
+		return 0x9C00
+	}
+	return 0x9800
+}
+
+// BGTileMap get the tile map area for the background to use
+func (l *LCDReg) BGTileMap() uint16 {
+	if (l.Control>>3)&0x01 == 0x01 {
+		return 0x9C00
+	}
+	return 0x9800
 }

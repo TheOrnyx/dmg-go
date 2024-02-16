@@ -16,8 +16,31 @@ func (s *Screen) Reset() {
 	s.Objects		= [144][160]Pixel{}
 }
 
+// CombineLine combine the 3 layers from line line together and add them to the line in FinalScreen
+func (s *Screen) CombineLine(line int)  {
+	var screen [160]Pixel
+
+	for x := range 160 {
+		winPixel := s.Window[line][x]
+		bgPixel := s.Background[line][x]
+		objPixel := s.Objects[line][x]
+
+		screen[x] = bgPixel
+
+		if winPixel.Opaque {
+			screen[x] = winPixel
+		}
+		
+		if objPixel.Opaque { // for the sprite pixels
+			screen[x] = objPixel
+		}
+	}
+	s.FinalScreen[line] = screen
+}
+
 // Pixel - a struct to hold pixel data
 type Pixel struct {
 	Color   byte // color number for the pixel
 	Palette byte // Value for which palette to use
+	Opaque bool // whether or not to draw that pixel (true = drawn)
 }
