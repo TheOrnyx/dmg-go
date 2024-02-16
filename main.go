@@ -3,40 +3,44 @@ package main
 import (
 	"log"
 
+	"flag"
+
 	"github.com/TheOrnyx/gameboy-golor/debugger"
+	_ "github.com/TheOrnyx/gameboy-golor/debugger"
 	emu "github.com/TheOrnyx/gameboy-golor/emulator"
+	"github.com/TheOrnyx/gameboy-golor/window"
 	// "github.com/TheOrnyx/gameboy-golor/window"
 )
 
+var debugMode bool = false
 const UsingSDL = true
 const WinScalar = 4 //the scalar used to scale up the gbc screen
 const WinWidth, WinHeight = 160 * WinScalar, 144 * WinScalar
 
+// enableDebug just for the flag to use
+func enableDebug(b string) error {
+	debugMode = true
+	return nil
+}
+
 func main() {
-	// fmt.Println("Starting...")
-	// window.StartSDLWindowSystem(WinWidth, WinHeight)
-	emulator, err := emu.NewEmulator("./Data/Roms/dmg-acid2.gb")
+	flag.BoolFunc("debug", "Activate Debug Mode", enableDebug)
+	flag.Parse()
+
+	window := window.InitSDLWindowSystem(WinWidth, WinHeight, WinScalar)
+	
+	emulator, err := emu.NewEmulator("./Data/Roms/drmario.gb", window)
 	if err != nil {
 		log.Fatal("Error making new emulator:", err)
 	}
 
-	// defer emulator.Renderer.CloseScreen()
+	defer emulator.Renderer.CloseScreen()
 
-	// debugger.DebugEmulatorDoctor(emulator)
-	// debugger.DebugEmulator(emulator)
-	debugger.DebugEmu(emulator)
-	// var running bool = true
-	// for running {
-	// 	emulator.CPU.Step()
-	// 	emu.DebugLog.Println(emulator.CPU)
-	// 	if emulator.MMU.ReadByte(0xff02) != 0 {
-	// 		char := emulator.MMU.ReadByte(0xff01)
-	// 		fmt.Println("Found write")
-	// 		fmt.Printf("%v", char)
-	// 		// emulator.MMU.WriteByte(0xff02, 0)
-	// 	}
-	// 	time.Sleep(time.Second/2)
-	// }
-	
-	// emu.InfoLog.Println("Program finished, exiting...")
+	if debugMode {
+		debugger.DebugEmu(emulator)
+	} else {
+		for  {
+			emulator.Step()
+		}
+	}
 }
