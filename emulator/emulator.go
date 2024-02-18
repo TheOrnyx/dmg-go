@@ -44,13 +44,14 @@ func NewEmulator(romPath string, renderer Screen) (*Emulator, error) {
 		return nil, err
 	}
 
-	emu.Timer = new(timer.Timer)
+	emu.Timer = timer.NewTimer(emu.RequestInterrupt)
 	emu.Renderer = renderer
 	emu.Joypad = joypad.NewJoypad(emu.RequestInterrupt)
 	emu.Joypad.ResetInput()
 	emu.PPU = ppu.NewPPU(emu.Timer, emu.RequestInterrupt)
 	emu.MMU = mmu.NewMMU(cart, emu.Timer, emu.PPU, emu.Joypad)
 	emu.CPU, _ = cpu.NewCPU(emu.MMU, emu.Timer)
+	emu.CPU.ResetDebug()
 
 	return emu, nil
 }
@@ -72,11 +73,11 @@ func (e *Emulator) Step()  {
 	e.Joypad.HandleInput(inputs)
 	mCycles := e.CPU.Step()
 	tCycles := mCycles*4
-	e.Timer.TickM(mCycles)
+	e.Timer.TickT(tCycles)
 	e.PPU.Step(uint16(tCycles))
 	e.CycleCount += mCycles
 
-	if e.CycleCount >= (cpu.ClockSpeed/ FrameRate) { // finish frame
+	if e.CycleCount >= (cpu.ClockSpeed/ 60) { // finish frame
 		e.CycleCount = 0
 		e.RenderScreen()
 		e.PPU.Screen.Reset()

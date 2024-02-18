@@ -44,12 +44,12 @@ type Debugger struct {
 func DebugEmulatorDoctor(emu *emulator.Emulator) {
 	emu.CPU.ResetDebug()
 	count := 1
-	maxTests := 5500000 // set to 0 or below for infinite running >:3
+	maxTests := 6500000 // set to 0 or below for infinite running >:3
 	debugger := Debugger{Emu: emu}
 	var serialOutput string
 
 	for !strings.Contains(serialOutput, "Passed") && count != maxTests {
-		fmt.Printf("%v\n", emu.CPU.StringDoctor())
+		fmt.Printf("%v\n%v\n", emu.CPU.StringDoctor(), emu.Timer.String())
 		emu.CPU.Step()
 		serialWritten, data := debugger.checkSerialLink()
 		if serialWritten {
@@ -62,8 +62,8 @@ func DebugEmulatorDoctor(emu *emulator.Emulator) {
 		count += 1
 	}
 	fmt.Println(serialOutput)
-	fmt.Println(emu.PPU.VRAM.RAM)
-	fmt.Println(emu.PPU.OAM.Data)
+	// fmt.Println(emu.PPU.VRAM.RAM)
+	// fmt.Println(emu.PPU.OAM.Data)
 }
 
 // DebugEmulator run and debug an emulator
@@ -93,7 +93,7 @@ func DebugEmulator(emu *emulator.Emulator) {
 // DebugEmu debug and run an emulator with the TUI
 func DebugEmu(emu *emulator.Emulator) {
 	emu.CPU.ResetDebug()
-	d := Debugger{Emu: emu, ActivePanel: 0}
+	d := Debugger{Emu: emu, ActivePanel: 0, fullSpeed: false}
 	s, err := initTcell()
 	if err != nil {
 		log.Fatal(err)
@@ -111,17 +111,25 @@ func DebugEmu(emu *emulator.Emulator) {
 	defer quit()
 
 	d.running = true
-	d.fullSpeed = true
+	d.fullSpeed = false
+
+	go func() {
+		for d.running {
+			updateDimensions(d.Screen)
+			d.Screen.Show()
+			d.Screen.Clear()
+			d.DrawUI()
+			time.Sleep(time.Millisecond*10)
+		}
+	}()
 
 	for d.running {
-		updateDimensions(d.Screen)
-		d.Screen.Show()
-		d.Screen.Clear()
 
 		if !d.fullSpeed {
 			ev := d.Screen.PollEvent()
 			d.handleKeys(ev)
 		} else {
+			d.Emu.Step()
 			if !d.polling {
 				d.polling = true
 				go func() {
@@ -131,10 +139,9 @@ func DebugEmu(emu *emulator.Emulator) {
 			}
 		}
 
-		d.Emu.Step()
 		// time.Sleep(time.Nanosecond)
 
-		d.DrawUI()
+		// d.DrawUI()
 	}
 }
 

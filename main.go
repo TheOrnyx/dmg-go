@@ -26,10 +26,11 @@ func enableDebug(b string) error {
 func main() {
 	flag.BoolFunc("debug", "Activate Debug Mode", enableDebug)
 	flag.Parse()
+	romPath := flag.Args()[0]
 
 	window := window.InitSDLWindowSystem(WinWidth, WinHeight, WinScalar)
 	
-	emulator, err := emu.NewEmulator("./Data/Roms/drmario.gb", window)
+	emulator, err := emu.NewEmulator(romPath, window)
 	if err != nil {
 		log.Fatal("Error making new emulator:", err)
 	}

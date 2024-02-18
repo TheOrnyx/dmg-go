@@ -162,15 +162,15 @@ func (cpu *CPU) ResetFlag(flag int) {
 	}
 }
 
-// Tick tick the cpu by cycles amount of M-cycles
-func (cpu *CPU) Tick(cycles int) {
-	cpu.Timer.TickM(cycles)
+// // Tick tick the cpu by cycles amount of M-cycles
+// func (cpu *CPU) Tick(cycles int) {
+// 	cpu.Timer.TickM(cycles)
 
-	if cpu.Timer.Overflowed { // TODO - maybe move this to function
-		cpu.Timer.Overflowed = false // NOTE - I think this is correct?
-		cpu.RequestInterrupt(Timer)
-	}
-}
+// 	if cpu.Timer.Overflowed { // TODO - maybe move this to function
+// 		cpu.Timer.Overflowed = false // NOTE - I think this is correct?
+// 		cpu.RequestInterrupt(Timer)
+// 	}
+// }
 
 // RequestInterrupt request an interrupt with code
 func (cpu *CPU) RequestInterrupt(code byte) {

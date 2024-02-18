@@ -51,27 +51,8 @@ func InitSDLWindowSystem(width, height, scale int32) *Context {
 		log.Println("Failed to scale up Renderer, continuing anyway but might not function")
 	}
 
-
 	return c
 }
-
-// // mainLoop run the mainloop
-// func (c *Context) mainLoop() {
-// 	running := true
-// 	for running {
-// 		c.ClearScreen()
-// 		c.RenderScreen()
-// 		c.Renderer.Present()
-// 		for event := sdl.PollEvent(); event != nil; event = sdl.PollEvent() {
-// 			switch event.(type) {
-// 			case *sdl.QuitEvent:
-// 				InfoLog.Println("Exiting SDL window...")
-// 				running = false
-// 				break
-// 			}
-// 		}
-// 	}
-// }
 
 // ClearScreen clears the screen
 func (c *Context) ClearScreen() {
@@ -90,6 +71,37 @@ func (c *Context) RenderScreen(screen *ppu.Screen) {
 	}
 	c.Renderer.Present()
 }
+
+// // DebugRender render the debug screen with each layer view
+// func (c *Context) DebugRender(screen *ppu.Screen)  {
+// 	width, height := 320, 288
+// 	midX, midY := 160, 144
+
+// 	// Background layer
+// 	for drawY := 0; drawY < int(midY); drawY++ { 
+// 		for drawX := 0; drawX < int(midX); drawX++ {
+// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Background[drawY][drawX].Color]))
+// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
+// 		}
+// 	}
+
+// 	// Window layer
+// 	for drawY := 0; drawY < int(midY); drawY++ {
+// 		for drawX := midX; drawX < width; drawX++ {
+// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Window[drawY][drawX - midX].Color]))
+// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
+// 		}
+// 	}
+
+// 	for drawY := midY; drawY < height; drawY++ {
+// 		for drawX := 0; drawX < int(midX); drawX++ {
+// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Objects[drawY - midY][drawX].Color]))
+// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
+// 		}
+// 	}
+
+// 	c.debugRender.Present()
+// }
 
 // colorsFromSDLCol return individual colors for a given sdl color
 func colorsFromSDLCol(col sdl.Color) (r, g, b, a uint8) {

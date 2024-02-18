@@ -78,6 +78,9 @@ func NewPPU(timer *timer.Timer, requestInterrupt func(code byte)) *PPU {
 
 // ReadByte read byte at location addr in PPU
 func (p *PPU) ReadByte(addr uint16) byte {
+	if p.Mode() == DrawMode {
+		return 0xFF 
+	}
 	switch {
 	case addr >= 0x8000 && addr <= 0x9FFF: // vram
 
@@ -93,6 +96,9 @@ func (p *PPU) ReadByte(addr uint16) byte {
 
 // WriteByte write byte value data to address addr in ppu
 func (p *PPU) WriteByte(addr uint16, data byte) {
+	if p.Mode() == DrawMode {
+		return
+	}
 	switch {
 	case addr >= 0x8000 && addr <= 0x9FFF: // vram
 		newAddr := addr - 0x8000
@@ -148,7 +154,7 @@ func (p *PPU) checkLYCInterrupt() {
 	}
 
 	if equal && (p.LCD.Stat>>6)&0x01 == 0x01 {
-		p.RequestInterrupt(vBlankInt)
+		p.RequestInterrupt(lcdInt)
 	}
 }
 
@@ -267,7 +273,7 @@ func (p *PPU) DrawBGScanline() {
 
 	tileMapAddr := p.LCD.BGTileMap()
 
-	for col := range uint8(160) {
+	for col := range uint8(159) {
 		x := col + p.LCD.SCX
 		y := p.LCD.LY + p.LCD.SCY
 		pixelVal := p.getTilePixel(x, y, tileMapAddr)
@@ -278,14 +284,14 @@ func (p *PPU) DrawBGScanline() {
 
 // DrawWinScanline draw a window scanline and push it to the screen layer
 func (p *PPU) DrawWinScanline() {
-	if !p.LCD.WindowEnabled() || p.LCD.LY < p.LCD.WY {
+	if !p.LCD.WindowEnabled() {
 		return
 	}
 
 	tilemapAddr := p.LCD.WinTileMap()
 	var pixelDrawn bool
 
-	for x := range uint8(160) {
+	for x := range uint8(159) {
 		winX := 0 - (int(p.LCD.WX) - 7) + int(x)
 
 		// don't draw if pixel off screen
@@ -345,7 +351,7 @@ func (p *PPU) DrawObjectScanline() {
 				continue
 			}
 
-			coverPixel := !p.Screen.Background[p.LCD.LY][posX].Opaque || !p.Screen.Window[p.LCD.LY][posX].Opaque
+			coverPixel := p.Screen.Background[p.LCD.LY][posX+pixel].Opaque || p.Screen.Window[p.LCD.LY][posX+pixel].Opaque
 			if !p.LCD.EnableBGWin() && sprite.priority() && coverPixel {
 				continue
 			}

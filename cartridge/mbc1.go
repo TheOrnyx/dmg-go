@@ -1,7 +1,5 @@
 package cartridge
 
-import "log"
-
 ////////////
 // TODO's //
 ////////////
@@ -83,10 +81,10 @@ func (m *MBC1) WriteByte(addr uint16, data byte)  {
 	switch {
 	case addr <= 0x1FFF && m.hasRAM: // enable or disable RAM
 		if data & 0x0F == 0x0A { // TODO - check that I don't need to check the mode
-			log.Printf("%s: Enabling RAM...\n", m.name)
+			// log.Printf("%s: Enabling RAM...\n", m.name)
 			m.ramEnabled = true
 		} else {
-			log.Printf("%s: DIsabling RAM...\n", m.name)
+			// log.Printf("%s: DIsabling RAM...\n", m.name)
 			m.ramEnabled = false
 		}
 
