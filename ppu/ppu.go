@@ -4,6 +4,7 @@ package ppu
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/TheOrnyx/gameboy-golor/timer"
 )
@@ -311,7 +312,8 @@ func (p *PPU) DrawObjectScanline() {
 	}
 
 	sprites := p.scanOAM(p.LCD.LY)
-
+	slices.Reverse(sprites)
+	
 	for i := range sprites {
 		sprite := sprites[i]
 

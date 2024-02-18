@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
+	"github.com/TheOrnyx/gameboy-golor/joypad"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/TheOrnyx/gameboy-golor/timer"
 )
@@ -33,7 +34,7 @@ func (w *WorkRam) WriteByte(addr uint16, data uint8) {
 
 // IO the struct for the IO registers in the MMU
 type IO struct {
-	JoypadInput    byte         // joypad input byte					(0xFF00)
+	Joypad *joypad.Joypad       // joypad input         				(0xFF00)
 	SerialTransfer [2]byte      // serial transfer						(0xFF01 - 0xFF02)
 	TimerControl   *timer.Timer // timer and divider					(0xFF04 - 0xFF07)
 	Audio          [23]byte     // Audio								(0xFF10 - 0xFF26)
@@ -50,7 +51,7 @@ type IO struct {
 func (io *IO) ReadByte(addr uint16) byte {
 	switch {
 	case addr == 0xFF00: // joypad
-		return io.JoypadInput
+		return io.Joypad.Read()
 
 	case addr >= 0xFF01 && addr <= 0xFF02: // serial transfer
 		return io.SerialTransfer[addr-0xFF01]
@@ -89,7 +90,7 @@ func (io *IO) ReadByte(addr uint16) byte {
 func (io *IO) WriteByte(addr uint16, data byte) {
 	switch {
 	case addr == 0xFF00: // joypad
-		io.JoypadInput = data // TODO - actually implement the proper input
+		io.Joypad.WriteData(data)
 
 	case addr >= 0xFF01 && addr <= 0xFF02: // serial transfer
 		io.SerialTransfer[addr-0xFF01] = data
@@ -133,13 +134,14 @@ type MMU struct {
 }
 
 // NewMMU create and return a new MMU
-func NewMMU(cart *cartridge.Cartridge, timer *timer.Timer, ppu *ppu.PPU) *MMU {
+func NewMMU(cart *cartridge.Cartridge, timer *timer.Timer, ppu *ppu.PPU, joypad *joypad.Joypad) *MMU {
 	newMMU := new(MMU)
 	newMMU.Cart = cart
 	newMMU.PPU = ppu
 	newMMU.IO.TimerControl = timer
 	newMMU.IO.LCD = &ppu.LCD
 	newMMU.IO.BootROMEnabled = 1
+	newMMU.IO.Joypad = joypad
 	newMMU.DebugMode = true // TODO - change later
 	return newMMU
 }
@@ -275,6 +277,7 @@ func (mmu *MMU) DMATransfer(data byte)  {
 	for i := uint16(0); i < 0xA0; i++ {
 		mmu.PPU.WriteByte(0xFE00+i, mmu.ReadByte(addr + i))
 	}
+	mmu.PPU.LCD.PrevOAM = data
 }
 
 // addWriteToDebug add the write attempt to the DebugRecords if debugMode is on

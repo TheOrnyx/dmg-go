@@ -21,6 +21,7 @@ type LCDReg struct {
 	SCX byte // Viewport X Pos (0xFF43)
 	WY  byte // Window Y pos (0xFF4A)
 	WX  byte // Window X pos (0xFF4B) - NOTE WX is position plus 7 so WX=7 is very left
+	PrevOAM byte // the previous oam data
 }
 
 // ReadByte read and return value at addr
@@ -37,6 +38,9 @@ func (l *LCDReg) ReadByte(addr uint16) byte {
 		
 	case 0xFF45: // LYC
 		return l.LYC
+
+	case 0xFF46: // prev OAM
+		return l.PrevOAM
 		
 	case 0xFF47: // BGP
 		return l.BGP
@@ -60,7 +64,7 @@ func (l *LCDReg) ReadByte(addr uint16) byte {
 		return l.WX
 
 	default:
-		log.Println("Unkown read in LCD IO at unkown addr:", addr)
+		// log.Println("Unkown read in LCD IO at unkown addr:", addr)
 	}
 	
 	return 0xFF

@@ -6,6 +6,7 @@ import (
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 	"github.com/TheOrnyx/gameboy-golor/cpu"
+	"github.com/TheOrnyx/gameboy-golor/joypad"
 	"github.com/TheOrnyx/gameboy-golor/mmu"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/TheOrnyx/gameboy-golor/timer"
@@ -17,6 +18,7 @@ type Screen interface {
 	ClearScreen()
 	RenderScreen(screen *ppu.Screen)
 	CloseScreen()
+	GetInput() [8]bool
 }
 
 type Emulator struct {
@@ -25,12 +27,13 @@ type Emulator struct {
 	PPU *ppu.PPU
 	Timer *timer.Timer
 	Renderer Screen
+	Joypad *joypad.Joypad
 	CycleCount int // the cycle count in M-Cycles
 }
 
 // NewEmulator Start a new emulator, load the rom in the given path and return the emulator instance
 func NewEmulator(romPath string, renderer Screen) (*Emulator, error) {
-	newEmu := new(Emulator)
+	emu := new(Emulator)
 	rom, err := os.ReadFile(romPath)
 	if err != nil {
 		return nil, err
@@ -41,18 +44,20 @@ func NewEmulator(romPath string, renderer Screen) (*Emulator, error) {
 		return nil, err
 	}
 
-	newEmu.Timer = new(timer.Timer)
-	newEmu.Renderer = renderer
+	emu.Timer = new(timer.Timer)
+	emu.Renderer = renderer
+	emu.Joypad = joypad.NewJoypad(emu.RequestInterrupt)
+	emu.Joypad.ResetInput()
+	emu.PPU = ppu.NewPPU(emu.Timer, emu.RequestInterrupt)
+	emu.MMU = mmu.NewMMU(cart, emu.Timer, emu.PPU, emu.Joypad)
+	emu.CPU, _ = cpu.NewCPU(emu.MMU, emu.Timer)
 
-	newEmu.PPU = ppu.NewPPU(newEmu.Timer, newEmu.RequestInterrupt)
-	newEmu.MMU = mmu.NewMMU(cart, newEmu.Timer, newEmu.PPU)
-	newEmu.CPU, _ = cpu.NewCPU(newEmu.MMU, newEmu.Timer)
-
-	return newEmu, nil
+	return emu, nil
 }
 
 // RequestInterrupt request interrupt on CPU (used for PPU)
 func (e *Emulator) RequestInterrupt(code byte)  {
+	// fmt.Println("Requesting interrupt:", code)
 	e.CPU.RequestInterrupt(code)
 }
 
@@ -63,6 +68,8 @@ func (e *Emulator) RunEmulator()  {
 
 // Step step the emulator by one
 func (e *Emulator) Step()  {
+	inputs := e.Renderer.GetInput()
+	e.Joypad.HandleInput(inputs)
 	mCycles := e.CPU.Step()
 	tCycles := mCycles*4
 	e.Timer.TickM(mCycles)

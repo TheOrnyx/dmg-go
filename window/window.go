@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/TheOrnyx/gameboy-golor/joypad"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/veandco/go-sdl2/sdl"
 )
@@ -100,4 +101,24 @@ func (c *Context) CloseScreen()  {
 	sdl.Quit()
 	c.Window.Destroy()
 	c.Renderer.Destroy()
+}
+
+// ReceiveInput return the current list of inputs based on their activeness
+// Returns bools based on an index using the joypad constants
+// TODO - implement mapping
+func (c *Context) GetInput() [8]bool {
+	var inputs [8]bool
+	sdl.PollEvent()
+	keys := sdl.GetKeyboardState()
+	inputs[joypad.ButtonA] = keys[sdl.SCANCODE_Z] == 1
+	inputs[joypad.ButtonB] = keys[sdl.SCANCODE_X] == 1
+	inputs[joypad.ButtonSel] = keys[sdl.SCANCODE_S] == 1
+	inputs[joypad.ButtonStart] = keys[sdl.SCANCODE_A] == 1
+
+	inputs[joypad.DpadRight] = keys[sdl.SCANCODE_RIGHT] == 1
+	inputs[joypad.DpadLeft] = keys[sdl.SCANCODE_LEFT] == 1
+	inputs[joypad.DpadUp] = keys[sdl.SCANCODE_UP] == 1
+	inputs[joypad.DpadDown] = keys[sdl.SCANCODE_DOWN] == 1
+
+	return inputs
 }
