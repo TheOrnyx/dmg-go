@@ -33,9 +33,9 @@ const ( // the interrupt constants
 	timerPos  = 0x04
 	serialPos = 0x08
 	joypadPos = 0x10
-
-
 )
+
+const maxDebugArrSize = 60
 
 const (
 	// Interrupt request codes
@@ -241,6 +241,9 @@ func (cpu *CPU) Step() int {
 
 		if cpu.debugMode {
 			cpu.PrevInstructions = append(cpu.PrevInstructions, *cpu.CurrentInstruction)
+			if len(cpu.PrevInstructions) > maxDebugArrSize {
+				cpu.PrevInstructions = cpu.PrevInstructions[len(cpu.PrevInstructions)-maxDebugArrSize:]
+			}
 		}
 
 	} else {

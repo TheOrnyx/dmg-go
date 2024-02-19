@@ -17,6 +17,8 @@ import (
 // TODO - IMPLEMENT THE BOOT ROM IMPORTANT PLEASE
 // TODO - finish teh read and write for io
 
+const maxDebugArrSize = 100
+
 type WorkRam struct {
 	RAM [0x2000]byte
 }
@@ -273,6 +275,9 @@ func (mmu *MMU) addWriteToDebug(addr uint16, data uint8, location string)  {
 	}
 
 	mmu.DebugRecords = append(mmu.DebugRecords, fmt.Sprintf("Writing %v to 0x%04X in %s", data, addr, location))
+	if len(mmu.DebugRecords) > maxDebugArrSize {
+		mmu.DebugRecords = mmu.DebugRecords[len(mmu.DebugRecords)-maxDebugArrSize:]
+	}
 }
 
 // addReadToDebug add write attempt to debugrecords if debugmode is on
@@ -282,4 +287,7 @@ func (mmu *MMU) addReadToDebug(addr uint16, data uint8, location string)  {
 	}
 
 	mmu.DebugRecords = append(mmu.DebugRecords, fmt.Sprintf("Read %v from 0x%04X in %s", data, addr, location))
+	if len(mmu.DebugRecords) > maxDebugArrSize {
+		mmu.DebugRecords = mmu.DebugRecords[len(mmu.DebugRecords)-maxDebugArrSize:]
+	}
 }
