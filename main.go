@@ -45,8 +45,9 @@ func main() {
 	if debugMode {
 		debugger.DebugEmu(emulator)
 	} else {
-		for  {
-			emulator.Step()
-		}
+		emulator.RunEmulator()
+		// for  {
+		// 	emulator.Step()
+		// }
 	}
 }

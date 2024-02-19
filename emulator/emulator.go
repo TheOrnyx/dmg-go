@@ -14,8 +14,8 @@ import (
 	"github.com/TheOrnyx/gameboy-golor/window"
 )
 
-const FrameRate = 60
-var frameDuration = time.Second/ time.Duration(FrameRate)
+var FrameRate float64 = 59.7
+var frameDuration = time.Second / time.Duration(FrameRate)
 
 
 type Emulator struct {
@@ -25,7 +25,7 @@ type Emulator struct {
 	Timer *timer.Timer
 	Renderer window.Screen
 	Joypad *joypad.Joypad
-	CycleCount int // the cycle count in M-Cycles
+	CycleCount int // the cycle count in T-Cycles!
 	frameStartTime time.Time
 }
 
@@ -62,28 +62,33 @@ func (e *Emulator) RequestInterrupt(code byte)  {
 
 // RunEmulator run the emulator normally
 func (e *Emulator) RunEmulator()  {
-	
+	e.frameStartTime = time.Now()
+	for  {
+		e.Step()
+	}
+
 }
 
 // Step step the emulator by one
 func (e *Emulator) Step()  {
-	inputs := e.Renderer.GetInput()
-	e.Joypad.HandleInput(inputs)
 	mCycles := e.CPU.Step()
 	tCycles := mCycles*4
 	e.Timer.TickT(tCycles)
 	e.PPU.Step(uint16(tCycles))
-	e.CycleCount += mCycles
+	e.CycleCount += tCycles
 
-	if e.CycleCount >= (cpu.ClockSpeed/ FrameRate) { // finish frame
+	if float64(e.CycleCount) >= (cpu.ClockSpeed/ FrameRate) { // finish frame
 		e.CycleCount = 0
-		// fmt.Println("time since last frame: %v", time.Since(e.frameStartTime))
+		inputs := e.Renderer.GetInput()
+		e.Joypad.HandleInput(inputs)
 		e.RenderScreen()
 		e.PPU.Screen.Reset()
-		sleepTime := frameDuration - time.Since(e.frameStartTime)
-		if sleepTime > 0 {
-			time.Sleep(sleepTime)
-		}
+		
+		elapsedTime := time.Since(e.frameStartTime)
+		sleepTime := frameDuration - elapsedTime
+		time.Sleep(sleepTime)
+		
+		// fmt.Printf("time since last frame: %v, sleeptime: %v\n", time.Since(e.frameStartTime), sleepTime)
 		e.frameStartTime = time.Now()
 	}
 }
