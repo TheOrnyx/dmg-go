@@ -231,6 +231,7 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "WRAM")
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // OAM
+
 		mmu.PPU.WriteByte(addr, data)
 		mmu.addWriteToDebug(addr, data, "OAM")
 

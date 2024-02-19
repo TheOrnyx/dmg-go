@@ -77,6 +77,7 @@ func (e *Emulator) Step()  {
 
 	if e.CycleCount >= (cpu.ClockSpeed/ FrameRate) { // finish frame
 		e.CycleCount = 0
+		// fmt.Println("time since last frame: %v", time.Since(e.frameStartTime))
 		e.RenderScreen()
 		e.PPU.Screen.Reset()
 		sleepTime := frameDuration - time.Since(e.frameStartTime)

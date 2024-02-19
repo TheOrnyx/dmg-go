@@ -222,6 +222,7 @@ func (cpu *CPU) Step() int {
 	if !cpu.Halted {
 		if cpu.checkInterrupts() {
 			cpu.instrCycles = 5
+			return cpu.instrCycles
 			// cpu.Tick(5) // tick 5 m-cycles for handling interrupts
 		}
 

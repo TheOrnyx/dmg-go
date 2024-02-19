@@ -171,7 +171,7 @@ func (p *PPU) String() string {
 // Step step the PPU and draw appropriate things
 func (p *PPU) Step(cycles uint16) {
 	p.cycles += cycles
-	p.checkLYCInterrupt()
+	// p.checkLYCInterrupt()
 
 	if p.cycles >= 456 { // go to next scanline
 		p.cycles -= 456
@@ -311,6 +311,7 @@ func (p *PPU) DrawObjectScanline() {
 		return
 	}
 
+	p.Screen.Objects[p.LCD.LY] = [160]Pixel{}
 	sprites := p.scanOAM(p.LCD.LY)
 	
 	for i := range sprites {
@@ -368,7 +369,7 @@ func (p *PPU) DrawObjectScanline() {
 
 // solveSpriteCollision take a sprite and the sprite currently at the location and return true if the newSprite should take priority
 func (p *PPU) solveSpriteCollision(newSprite, oldSprite *Sprite) bool {
-	if newSprite.Position <= oldSprite.Position {
+	if newSprite.Position <= oldSprite.Position || newSprite.PosX < oldSprite.PosX {
 		return true
 	}
 	return false
