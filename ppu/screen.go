@@ -43,4 +43,5 @@ type Pixel struct {
 	Color   byte // color number for the pixel
 	Palette byte // Value for which palette to use
 	Opaque bool // whether or not to draw that pixel (true = drawn)
+	Sprite *Sprite // the sprite this pixel is sourced from (only used for objects to determine priority)
 }

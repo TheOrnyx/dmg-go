@@ -336,16 +336,16 @@ func (p *PPU) DrawObjectScanline() {
 		spriteDataLow := p.ReadByte(spriteDataAddr)
 		spriteDataHigh := p.ReadByte(spriteDataAddr+1)
 
-		for pixel := range uint8(7) {
+		for pixel := range uint8(8) {
 			posX := sprite.PosX - 8 // the relative posX
-			outOfRangeLeft := (int(sprite.PosX) - 8) + int(pixel) < 0
+			outOfRangeLeft := (int(sprite.PosX) - 8) + int(pixel) <= 0
 			outOfRangeRight := (sprite.PosX - 8) + pixel >= 160
 			if outOfRangeLeft || outOfRangeRight {
 				continue
 			}
 
-			coverPixel := p.Screen.Background[p.LCD.LY][posX+pixel].Opaque || p.Screen.Window[p.LCD.LY][posX+pixel].Opaque
-			if !p.LCD.EnableBGWin() && sprite.priority() && coverPixel {
+			coverPixel := p.Screen.Background[p.LCD.LY][posX+pixel].Color != 0 || p.Screen.Window[p.LCD.LY][posX+pixel].Color != 0
+			if p.LCD.EnableBGWin() && sprite.priority() && coverPixel {
 				continue
 			}
 
@@ -356,9 +356,22 @@ func (p *PPU) DrawObjectScanline() {
 
 			pixelVal := getPixel(spriteDataLow, spriteDataHigh, pixelNum)
 			color := (p.getDMGPalette(&sprite) >> (pixelVal * 2)) & 0x03
-			p.Screen.Objects[p.LCD.LY][posX+pixel] = Pixel{Color: color, Opaque: color != 0}
+			if pixelVal != 0 && p.Screen.Objects[p.LCD.LY][posX+pixel].Opaque {
+				if !p.solveSpriteCollision(&sprite, p.Screen.Objects[p.LCD.LY][posX+pixel].Sprite) {
+					continue
+				}
+			}
+			p.Screen.Objects[p.LCD.LY][posX+pixel] = Pixel{Color: color, Opaque: pixelVal != 0, Sprite: &sprite}
 		}
 	}
+}
+
+// solveSpriteCollision take a sprite and the sprite currently at the location and return true if the newSprite should take priority
+func (p *PPU) solveSpriteCollision(newSprite, oldSprite *Sprite) bool {
+	if newSprite.Position <= oldSprite.Position {
+		return true
+	}
+	return false
 }
 
 // getDMGPalette get the actual palette data for a given obj

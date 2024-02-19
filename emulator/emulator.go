@@ -3,6 +3,7 @@ package emulator
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
 	"github.com/TheOrnyx/gameboy-golor/cpu"
@@ -14,7 +15,7 @@ import (
 )
 
 const FrameRate = 60
-
+var frameDuration = time.Second/ time.Duration(FrameRate)
 
 
 type Emulator struct {
@@ -25,6 +26,7 @@ type Emulator struct {
 	Renderer window.Screen
 	Joypad *joypad.Joypad
 	CycleCount int // the cycle count in M-Cycles
+	frameStartTime time.Time
 }
 
 // NewEmulator Start a new emulator, load the rom in the given path and return the emulator instance
@@ -48,7 +50,7 @@ func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 	emu.MMU = mmu.NewMMU(cart, emu.Timer, emu.PPU, emu.Joypad)
 	emu.CPU, _ = cpu.NewCPU(emu.MMU, emu.Timer)
 	emu.CPU.ResetDebug()
-
+	emu.frameStartTime = time.Now()
 	return emu, nil
 }
 
@@ -73,10 +75,15 @@ func (e *Emulator) Step()  {
 	e.PPU.Step(uint16(tCycles))
 	e.CycleCount += mCycles
 
-	if e.CycleCount >= (cpu.ClockSpeed/ 60) { // finish frame
+	if e.CycleCount >= (cpu.ClockSpeed/ FrameRate) { // finish frame
 		e.CycleCount = 0
 		e.RenderScreen()
 		e.PPU.Screen.Reset()
+		sleepTime := frameDuration - time.Since(e.frameStartTime)
+		if sleepTime > 0 {
+			time.Sleep(sleepTime)
+		}
+		e.frameStartTime = time.Now()
 	}
 }
 
