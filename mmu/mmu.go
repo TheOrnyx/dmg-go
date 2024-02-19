@@ -142,7 +142,7 @@ func NewMMU(cart *cartridge.Cartridge, timer *timer.Timer, ppu *ppu.PPU, joypad 
 	newMMU.IO.LCD = &ppu.LCD
 	newMMU.IO.BootROMEnabled = 1
 	newMMU.IO.Joypad = joypad
-	newMMU.DebugMode = true // TODO - change later
+	newMMU.DebugMode = false // TODO - change later
 	return newMMU
 }
 
@@ -156,10 +156,6 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return data
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video RAM
-		if mmu.IO.LCD.StatMode() == 3 {
-			mmu.addReadToDebug(addr, 0xFF, "VRAM (locked)")
-			return 0xFF
-		}
 		
 		data := mmu.PPU.ReadByte(addr)
 		mmu.addReadToDebug(addr, data, "VRAM")
@@ -188,10 +184,6 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return mmu.interruptEnabled
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // object attribute memory
-		if mmu.IO.LCD.StatMode() > 1 {
-			mmu.addReadToDebug(addr, 0xFF, "OAM (locked)")
-			return 0xFF
-		}
 		data := mmu.PPU.ReadByte(addr)
 		mmu.addReadToDebug(addr, data, "OAM")
 		return data
@@ -223,9 +215,6 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "Cart")
 
 	case addr >= 0x8000 && addr <= 0x9FFF: // Video ram
-		if mmu.IO.LCD.StatMode() == 3 { // don't write if drawing?
-			return
-		}
 		mmu.PPU.WriteByte(addr, data)
 		mmu.addWriteToDebug(addr, data, "VRAM")
 
@@ -240,9 +229,6 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "WRAM")
 
 	case addr >= 0xFE00 && addr <= 0xFE9F: // OAM
-		if mmu.IO.LCD.StatMode() > 1 {
-			return
-		}
 		mmu.PPU.WriteByte(addr, data)
 		mmu.addWriteToDebug(addr, data, "OAM")
 

@@ -38,6 +38,7 @@ type Debugger struct {
 	running bool // whether the main loop should run
 	fullSpeed bool // whether the main loop should run at full speed rather than step by step
 	polling bool // whether a goroutine is polling events (used to prevent more than one goroutine being created)
+	serialOutput string // the serial output
 }
 
 // DebugEmulatorDoctor run and debug emulator outputting in doctor format
@@ -111,7 +112,7 @@ func DebugEmu(emu *emulator.Emulator) {
 	defer quit()
 
 	d.running = true
-	d.fullSpeed = false
+	d.fullSpeed = true
 
 	go func() {
 		for d.running {
@@ -124,7 +125,10 @@ func DebugEmu(emu *emulator.Emulator) {
 	}()
 
 	for d.running {
-
+		serialWritten, data := d.checkSerialLink()
+		if serialWritten {
+			d.serialOutput += string(data)
+		}
 		if !d.fullSpeed {
 			ev := d.Screen.PollEvent()
 			d.handleKeys(ev)
@@ -234,10 +238,12 @@ func (d *Debugger) drawCPUDataPanel(sepY int) {
 	secondLine := fmt.Sprintf("Regs:%v", cpu.Reg.String())
 	thirdLine := fmt.Sprintf("PCMem: %v, %v, %v, %v", pc, pcOne, pcTwo, pcThree)
 	fourthLine := fmt.Sprintf("Timer: %v, FrameCycles: %v", d.Emu.Timer, d.Emu.CycleCount)
+	fifthLine := fmt.Sprintf("SerialOutput: %s", d.serialOutput)	
 	drawText(d.Screen, startX, startY, maxX-1, endY, defStyle, firstLine)
 	drawText(d.Screen, startX, startY+1, maxX-1, endY, defStyle, secondLine)
 	drawText(d.Screen, startX, startY+2, maxX-1, endY, defStyle, thirdLine)
 	drawText(d.Screen, startX, startY+3, maxX-1, endY, defStyle, fourthLine)
+	drawText(d.Screen, startX, startY+4, maxX-1, endY, defStyle, fifthLine)
 }
 
 // drawMMUPanel draw the MMU panel

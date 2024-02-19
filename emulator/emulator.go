@@ -10,29 +10,25 @@ import (
 	"github.com/TheOrnyx/gameboy-golor/mmu"
 	"github.com/TheOrnyx/gameboy-golor/ppu"
 	"github.com/TheOrnyx/gameboy-golor/timer"
+	"github.com/TheOrnyx/gameboy-golor/window"
 )
 
 const FrameRate = 60
 
-type Screen interface {
-	ClearScreen()
-	RenderScreen(screen *ppu.Screen)
-	CloseScreen()
-	GetInput() [8]bool
-}
+
 
 type Emulator struct {
 	CPU *cpu.CPU
 	MMU *mmu.MMU
 	PPU *ppu.PPU
 	Timer *timer.Timer
-	Renderer Screen
+	Renderer window.Screen
 	Joypad *joypad.Joypad
 	CycleCount int // the cycle count in M-Cycles
 }
 
 // NewEmulator Start a new emulator, load the rom in the given path and return the emulator instance
-func NewEmulator(romPath string, renderer Screen) (*Emulator, error) {
+func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 	emu := new(Emulator)
 	rom, err := os.ReadFile(romPath)
 	if err != nil {

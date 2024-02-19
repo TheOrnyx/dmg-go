@@ -4,7 +4,6 @@ package ppu
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/TheOrnyx/gameboy-golor/timer"
 )
@@ -78,9 +77,6 @@ func NewPPU(timer *timer.Timer, requestInterrupt func(code byte)) *PPU {
 
 // ReadByte read byte at location addr in PPU
 func (p *PPU) ReadByte(addr uint16) byte {
-	if p.Mode() == DrawMode {
-		return 0xFF 
-	}
 	switch {
 	case addr >= 0x8000 && addr <= 0x9FFF: // vram
 
@@ -96,9 +92,6 @@ func (p *PPU) ReadByte(addr uint16) byte {
 
 // WriteByte write byte value data to address addr in ppu
 func (p *PPU) WriteByte(addr uint16, data byte) {
-	if p.Mode() == DrawMode {
-		return
-	}
 	switch {
 	case addr >= 0x8000 && addr <= 0x9FFF: // vram
 		newAddr := addr - 0x8000
@@ -257,6 +250,7 @@ func (p *PPU) scanOAM(scanY uint8) []Sprite {
 		}
 		
 		sprite := p.getSprite(i)
+		
 		if scanY+16 >= sprite.PosY && scanY+16 < sprite.PosY+spriteHeight {
 			sprites = append(sprites, sprite)
 		}
@@ -277,14 +271,14 @@ func (p *PPU) DrawBGScanline() {
 		x := col + p.LCD.SCX
 		y := p.LCD.LY + p.LCD.SCY
 		pixelVal := p.getTilePixel(x, y, tileMapAddr)
-		color := (p.LCD.BGP >> (pixelVal * 2)) & 0x03
+		color := (p.LCD.BGP >> (2 * pixelVal)) & 0x03
 		p.Screen.Background[p.LCD.LY][col] = Pixel{Color: color, Opaque: true}
 	}
 }
 
 // DrawWinScanline draw a window scanline and push it to the screen layer
 func (p *PPU) DrawWinScanline() {
-	if !p.LCD.WindowEnabled() {
+	if !p.LCD.WindowEnabled() || p.LCD.LY < p.LCD.WY {
 		return
 	}
 
@@ -318,7 +312,6 @@ func (p *PPU) DrawObjectScanline() {
 	}
 
 	sprites := p.scanOAM(p.LCD.LY)
-	slices.Reverse(sprites)
 	
 	for i := range sprites {
 		sprite := sprites[i]
@@ -387,7 +380,7 @@ func (p *PPU) getTilePixel(x, y uint8, tileMapAddr uint16) uint8 {
 
 	tileDataNum := p.ReadByte(tileMapAddr + tileNum)
 	tileDataAddr := getTileDataAddress(p.LCD.TileDataAddrMode(), tileDataNum)
-
+	
 	pixelRowNum := y % 8
 	pixelColNum := x % 8
 
@@ -406,8 +399,8 @@ func getPixel(tileLow, tileHigh, pixelNum uint8) uint8 {
 }
 
 // getTileDataAddress get the address for the tile data based on the addressing mode
-func getTileDataAddress(baseAddress uint16, tileNum uint8) uint16 {
-	if baseAddress == 0x8800 {
+func getTileDataAddress(baseAddress uint16, tileNum uint8) uint16 {	
+	if baseAddress == 0x8800 {		
 		return baseAddress + (uint16(int16(int8(tileNum))+128) * 16)
 	}
 

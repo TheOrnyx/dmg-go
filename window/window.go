@@ -16,6 +16,13 @@ const (
 	gbScreenHeight = 144
 )
 
+type Screen interface {
+	ClearScreen()
+	RenderScreen(screen *ppu.Screen)
+	CloseScreen()
+	GetInput() [8]bool
+}
+
 type Context struct {
 	Window   *sdl.Window
 	Renderer *sdl.Renderer
@@ -28,8 +35,17 @@ var Palette [4]sdl.Color = [4]sdl.Color{
 	sdl.Color{R: 15, G: 56, B: 15, A: 255},
 }
 
+// var Palette [4]sdl.Color = [4]sdl.Color{
+// 	sdl.Color{R: 255, G: 255, B: 255, A: 255},
+// 	sdl.Color{R: 172, G: 172, B: 172, A: 255},
+// 	sdl.Color{R: 84, G: 84, B: 84, A: 255},
+// 	sdl.Color{R: 0, G: 0, B: 0, A: 255},
+// }
+
+
+
 // StartSDLWindowSystem initialize and start running the sdl windowsystem
-func InitSDLWindowSystem(width, height, scale int32) *Context {
+func InitSDLWindowSystem(width, height, scale int32) Screen {
 	c := new(Context)
 
 	if err := sdl.Init(sdl.INIT_EVERYTHING); err != nil {

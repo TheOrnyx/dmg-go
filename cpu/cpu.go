@@ -246,7 +246,7 @@ func (cpu *CPU) Step() int {
 	} else {
 		interuptEnabled := cpu.ReadByte(IEAddr)
 		interruptFlag := cpu.ReadByte(IFAddr)
-		if interuptEnabled&interruptFlag != 0 {
+		if interuptEnabled&interruptFlag != 0 { // TODO - check this
 			cpu.Halted = false
 		}
 	}
