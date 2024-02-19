@@ -59,7 +59,7 @@ func (d *DebugWindow) RenderScreen(screen *ppu.Screen)  {
 	// Background layer
 	for drawY := 0; drawY < int(d.midY); drawY++ { 
 		for drawX := 0; drawX < int(d.midX); drawX++ {
-			d.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.Background[drawY][drawX].Color]))
+			d.Renderer.SetDrawColor(colorsFromSDLCol(mainPalette[screen.Background[drawY][drawX].Color]))
 			d.Renderer.DrawPoint(int32(drawX), int32(drawY))
 		}
 	}
@@ -67,21 +67,21 @@ func (d *DebugWindow) RenderScreen(screen *ppu.Screen)  {
 	// Window layer
 	for drawY := 0; drawY < int(d.midY); drawY++ {
 		for drawX := d.midX; drawX < d.width; drawX++ {
-			d.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.Window[drawY][drawX - d.midX].Color]))
+			d.Renderer.SetDrawColor(colorsFromSDLCol(mainPalette[screen.Window[drawY][drawX - d.midX].Color]))
 			d.Renderer.DrawPoint(int32(drawX), int32(drawY))
 		}
 	}
 
 	for drawY := d.midY; drawY < d.height; drawY++ {
 		for drawX := 0; drawX < int(d.midX); drawX++ {
-			d.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.Objects[drawY - d.midY][drawX].Color]))
+			d.Renderer.SetDrawColor(colorsFromSDLCol(mainPalette[screen.Objects[drawY - d.midY][drawX].Color]))
 			d.Renderer.DrawPoint(int32(drawX), int32(drawY))
 		}
 	}
 
 	for drawY := d.midY; drawY < d.height; drawY++ {
 		for drawX := d.midX; drawX < d.width; drawX++ {
-			d.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.FinalScreen[drawY - d.midY][drawX - d.midX].Color]))
+			d.Renderer.SetDrawColor(colorsFromSDLCol(mainPalette[screen.FinalScreen[drawY - d.midY][drawX - d.midX].Color]))
 			d.Renderer.DrawPoint(int32(drawX), int32(drawY))
 		}
 	}

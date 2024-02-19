@@ -28,20 +28,21 @@ type Context struct {
 	Renderer *sdl.Renderer
 }
 
-var Palette [4]sdl.Color = [4]sdl.Color{
+var GreenPalette [4]sdl.Color = [4]sdl.Color{
 	sdl.Color{R: 155, G: 188, B: 15, A: 255},
 	sdl.Color{R: 139, G: 172, B: 15, A: 255},
 	sdl.Color{R: 48, G: 98, B: 48, A: 255},
 	sdl.Color{R: 15, G: 56, B: 15, A: 255},
 }
 
-// var Palette [4]sdl.Color = [4]sdl.Color{
-// 	sdl.Color{R: 255, G: 255, B: 255, A: 255},
-// 	sdl.Color{R: 172, G: 172, B: 172, A: 255},
-// 	sdl.Color{R: 84, G: 84, B: 84, A: 255},
-// 	sdl.Color{R: 0, G: 0, B: 0, A: 255},
-// }
+var GrayPalette [4]sdl.Color = [4]sdl.Color{
+	sdl.Color{R: 255, G: 255, B: 255, A: 255},
+	sdl.Color{R: 172, G: 172, B: 172, A: 255},
+	sdl.Color{R: 84, G: 84, B: 84, A: 255},
+	sdl.Color{R: 0, G: 0, B: 0, A: 255},
+}
 
+var mainPalette = GreenPalette
 
 
 // StartSDLWindowSystem initialize and start running the sdl windowsystem
@@ -81,43 +82,12 @@ func (c *Context) RenderScreen(screen *ppu.Screen) {
 	for drawY := 0; drawY < gbScreenHeight; drawY++ {
 		for drawX := 0; drawX < gbScreenWidth; drawX++ {
 			
-			c.Renderer.SetDrawColor(colorsFromSDLCol(Palette[screen.FinalScreen[drawY][drawX].Color]))
+			c.Renderer.SetDrawColor(colorsFromSDLCol(mainPalette[screen.FinalScreen[drawY][drawX].Color]))
 			c.Renderer.DrawPoint(int32(drawX), int32(drawY))
 		}
 	}
 	c.Renderer.Present()
 }
-
-// // DebugRender render the debug screen with each layer view
-// func (c *Context) DebugRender(screen *ppu.Screen)  {
-// 	width, height := 320, 288
-// 	midX, midY := 160, 144
-
-// 	// Background layer
-// 	for drawY := 0; drawY < int(midY); drawY++ { 
-// 		for drawX := 0; drawX < int(midX); drawX++ {
-// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Background[drawY][drawX].Color]))
-// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
-// 		}
-// 	}
-
-// 	// Window layer
-// 	for drawY := 0; drawY < int(midY); drawY++ {
-// 		for drawX := midX; drawX < width; drawX++ {
-// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Window[drawY][drawX - midX].Color]))
-// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
-// 		}
-// 	}
-
-// 	for drawY := midY; drawY < height; drawY++ {
-// 		for drawX := 0; drawX < int(midX); drawX++ {
-// 			c.debugRender.SetDrawColor(colorsFromSDLCol(Palette[screen.Objects[drawY - midY][drawX].Color]))
-// 			c.debugRender.DrawPoint(int32(drawX), int32(drawY))
-// 		}
-// 	}
-
-// 	c.debugRender.Present()
-// }
 
 // colorsFromSDLCol return individual colors for a given sdl color
 func colorsFromSDLCol(col sdl.Color) (r, g, b, a uint8) {
@@ -148,5 +118,13 @@ func (c *Context) GetInput() [8]bool {
 	inputs[joypad.DpadUp] = keys[sdl.SCANCODE_UP] == 1
 	inputs[joypad.DpadDown] = keys[sdl.SCANCODE_DOWN] == 1
 
+	if keys[sdl.SCANCODE_R] == 1 {
+		if mainPalette == GreenPalette {
+			mainPalette = GrayPalette
+		} else {
+			mainPalette = GreenPalette
+		}
+	}
+	
 	return inputs
 }
