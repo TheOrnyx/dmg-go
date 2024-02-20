@@ -51,6 +51,7 @@ func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 	emu.CPU, _ = cpu.NewCPU(emu.MMU, emu.Timer)
 	emu.CPU.ResetDebug()
 	emu.frameStartTime = time.Now()
+	fmt.Println(emu.DebugInfo())
 	return emu, nil
 }
 
