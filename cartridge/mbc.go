@@ -23,6 +23,22 @@ func createROMBanks(romData []byte, bankNum int) [][]byte {
 	return romBanks
 }
 
+// createROMBanksFromZero same as createROMBanks but writes the
+// 0x0000-0x4000 to the first bank
+func createROMBanksFromZero(romData []byte, bankNum int) [][]byte {
+	romBanks := make([][]byte, bankNum)
+
+	romBanks[0] = romData[0x0000:0x4000] // TODO - check this
+	chunk := 0x4000
+
+	for i := 1; i < bankNum; i++ {
+		romBanks[i] = romData[chunk : chunk+0x4000]
+		chunk += 0x4000
+	}
+	
+	return romBanks
+}
+
 // createRAMBanks create bankNum amount of RAM Banks and populate them before returning
 func createRAMBanks(bankNum int) [][]byte {
 	ramBanks := make([][]byte, bankNum)

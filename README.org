@@ -6,19 +6,24 @@ written in go. This is a first attempt at systems stuff so it's not the best and
 quite inaccurate but I hope this can serve as a good learning resource or smth
 for other people hoping to attempt the same thing.
 
+NOTE - this was originally supposed to be a Gameboy Color emulator but I decided
+partway through to just focus on doing basic DMG emulation as CGB seemed to
+hard, however you may still find traces of GBC stuff in here
+
 * Current features and TODO's
 + [-] Functional (albeit inaccurate) CPU
 + [-] Working PPU (but needs fixing)
-+ [-] MBC support [2/4]
++ [-] MBC support [4/5]
   + [X] MBC0
   + [X] MBC1
   + [ ] MBC2
-  + [ ] MBC3 (timer not implemented)
+  + [X] MBC3 (timer not implemented)
+  + [X] MBC5
 
 * Resources and credits
-I used a lot of resources and I also +plagiarized+ +borrowed+
-referenced some already existing gameboy/color emulators for
-inspiration and to get an idea of how they did their stuff.
+I used a lot of resources and I also +plagiarized+ +borrowed+ referenced some
+already existing gameboy/color emulators for inspiration and to get an idea of
+how they did their stuff.
 
 [[https://github.com/djhworld/gomeboycolor]] - this is another gameboy-color
 emulator written in go that I used as a reference point for a couple of parts of
@@ -31,8 +36,7 @@ functions as it helped me clearly see how some of the functions operated
 [[https://gbdev.io/gb-opcodes//optables/]] - This is one of quite a few tables that
 show all of the CPU instruction functions along with their OPCode and other
 stuff, this helped quite a lot with understanding the CPU instructions more as
-well as provided me with the json file to easily format and then use these
-instructions in my program
+well
 
 [[https://rylev.github.io/DMG-01/public/book/introduction.html]] - I didn't end up
 following this one exactly but it was helpful as a baseline to help me
@@ -45,4 +49,6 @@ amazingly written and while it can be a little bit confusing it's amazing
 reference material
 
 
-[[https://hacktix.github.io/GBEDG/]] - Great for helping with quite a few things
+[[https://hacktix.github.io/GBEDG/]] - Great for helping with quite a few things as
+it specified some things that are either vaguely described in the pandocs or
+just aren't

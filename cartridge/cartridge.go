@@ -133,11 +133,17 @@ func (c *Cartridge) InitCart(rom []byte) error {
 		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, true)
 		c.MBCType = "MBC1 battery"
 	// case MBC_2, MBC_2_BATTERY:
-	// 	c.MBC = NewMBC2(rom, c.ROMSize)
+	// 	c.MBC = NewMBC2(rom, c.ROMSize, c.RAMSize)
 	// 	c.MBCType = "MBC2"
 	case MBC_3, MBC_3_RAM_BATTERY:
 		c.MBC = NewMBC3(rom, true, true, c.RAMSize, c.ROMSize)
 		c.MBCType = "MBC3"
+	case MBC_5, MBC_5_RAM, MBC_5_RUMBLE_RAM:
+		c.MBC = NewMBC5(rom, false, c.RAMSize, c.ROMSize)
+		c.MBCType = "MBC5 (no battery)"
+	case MBC_5_RAM_BATTERY, MBC_5_RUMBLE_RAM_BATTERY:
+		c.MBC = NewMBC5(rom, true, c.RAMSize, c.ROMSize)
+		c.MBCType = "MBC5 (battery)"
 	default:
 		log.Fatalf("Not implemented cart type: %v, %v, %v", c.Type.ID, c.Type.Desc, c.Title)
 	}
