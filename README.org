@@ -11,8 +11,11 @@ partway through to just focus on doing basic DMG emulation as CGB seemed to
 hard, however you may still find traces of GBC stuff in here
 
 * Current features and TODO's
-+ [-] Functional (albeit inaccurate) CPU
-+ [-] Working PPU (but needs fixing)
++ [X] Functional (albeit inaccurate) CPU
++ [X] Working PPU (but needs fixing)
++ [X] Basic saving and loading
++ [ ] Audio
++ [ ] CGB support (probably unlikely)
 + [-] MBC support [4/5]
   + [X] MBC0
   + [X] MBC1
