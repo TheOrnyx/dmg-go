@@ -21,13 +21,13 @@ var frameDuration = time.Second / time.Duration(FrameRate)
 var SaveDirLoc string = "./Saves" // TODO - replace this with like a different directory
 
 type Emulator struct {
-	CPU *cpu.CPU
-	MMU *mmu.MMU
-	PPU *ppu.PPU
-	Timer *timer.Timer
-	Renderer window.Screen
-	Joypad *joypad.Joypad
-	CycleCount int // the cycle count in T-Cycles!
+	CPU            *cpu.CPU
+	MMU            *mmu.MMU
+	PPU            *ppu.PPU
+	Timer          *timer.Timer
+	Renderer       window.Screen
+	Joypad         *joypad.Joypad
+	CycleCount     int // the cycle count in T-Cycles!
 	frameStartTime time.Time
 }
 
@@ -64,13 +64,13 @@ func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 }
 
 // RequestInterrupt request interrupt on CPU (used for PPU)
-func (e *Emulator) RequestInterrupt(code byte)  {
+func (e *Emulator) RequestInterrupt(code byte) {
 	// fmt.Println("Requesting interrupt:", code)
 	e.CPU.RequestInterrupt(code)
 }
 
 // RunEmulator run the emulator normally
-func (e *Emulator) RunEmulator()  {
+func (e *Emulator) RunEmulator() {
 	e.frameStartTime = time.Now()
 	running := true
 	for running {
@@ -81,26 +81,26 @@ func (e *Emulator) RunEmulator()  {
 
 // Step step the emulator by one
 // Returns whether or not emu should close
-func (e *Emulator) Step() bool  {
+func (e *Emulator) Step() bool {
 	closeEmu := false
 	mCycles := e.CPU.Step()
-	tCycles := mCycles*4
+	tCycles := mCycles * 4
 	e.Timer.TickT(tCycles)
 	e.PPU.Step(uint16(tCycles))
 	e.CycleCount += tCycles
 
-	if float64(e.CycleCount) >= (cpu.ClockSpeed/ FrameRate) { // finish frame
+	if float64(e.CycleCount) >= (cpu.ClockSpeed / FrameRate) { // finish frame
 		e.CycleCount = 0
 		inputs, close := e.Renderer.GetInput()
 		closeEmu = close
 		e.Joypad.HandleInput(inputs)
 		e.RenderScreen()
 		e.PPU.Screen.Reset()
-		
+
 		elapsedTime := time.Since(e.frameStartTime)
 		sleepTime := frameDuration - elapsedTime
 		time.Sleep(sleepTime)
-		
+
 		// fmt.Printf("time since last frame: %v, sleeptime: %v\n", time.Since(e.frameStartTime), sleepTime)
 		e.frameStartTime = time.Now()
 	}
@@ -132,6 +132,10 @@ func (e *Emulator) LoadSaveFile() error {
 // CloseEmulator close the emulator and write saves if needed
 func (e *Emulator) CloseEmulator() {
 	e.Renderer.CloseScreen()
+	if e.MMU.Cart.RAMSize == 0 {
+		return
+	}
+	
 	os.Mkdir(SaveDirLoc, 0750)
 	file, err := os.Create(fmt.Sprintf("%s/%s", SaveDirLoc, e.CPU.MMU.Cart.SaveTitle()))
 	if err != nil {
@@ -146,7 +150,7 @@ func (e *Emulator) CloseEmulator() {
 }
 
 // RenderScreen render the screen
-func (e *Emulator) RenderScreen()  {
+func (e *Emulator) RenderScreen() {
 	e.Renderer.ClearScreen()
 	e.Renderer.RenderScreen(&e.PPU.Screen)
 }
