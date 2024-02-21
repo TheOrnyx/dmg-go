@@ -1,5 +1,7 @@
 package cartridge
 
+import "io"
+
 ////////////
 // TODO's //
 ////////////
@@ -13,8 +15,8 @@ const (
 )
 
 type MBC1 struct {
-	name string
-	mode uint8 // The banking mode (0 for default/ 16mbROM with 8kbRAM - 1 for 4mbROM with 32KBRAM) - TODO CHECK THIS
+	name       string
+	mode       uint8 // The banking mode (0 for default/ 16mbROM with 8kbRAM - 1 for 4mbROM with 32KBRAM) - TODO CHECK THIS
 	hasBattery bool
 
 	romBank0 []byte // contains first 16kib of the cart ROM
@@ -27,6 +29,26 @@ type MBC1 struct {
 	hasRAM     bool // whether or not the MBC1 has ram or not (cuz like there's some that don't have ram)
 	ramEnabled bool // bool for if RAM is enabled or not
 	RAMSize    int  // the ram size
+}
+
+// LoadFile implements MemoryBankController.
+func (m *MBC1) LoadFile(file io.Reader) error {
+	if !m.hasBattery {
+		return nil
+	}
+	var err error = nil
+
+	m.ramBanks, err = readRamFromFile(file, len(m.ramBanks), 0x2000)
+	return err
+}
+
+// SaveFile implements MemoryBankController.
+func (m *MBC1) SaveFile(file io.Writer) error {
+	if !m.hasBattery {
+		return nil
+	}
+
+	return writeRAMToFile(m.ramBanks, file)
 }
 
 // NewMBC1 create a new MBC1 from specifications
@@ -66,9 +88,9 @@ func (m *MBC1) ReadByte(addr uint16) byte {
 		if m.hasRAM && m.ramEnabled {
 			switch m.mode {
 			case fourMBRom32KBRam:
-				return m.ramBanks[m.ramBank][addr - 0xA000]
+				return m.ramBanks[m.ramBank][addr-0xA000]
 			case sixteenMBRom8KBRam:
-				return m.ramBanks[0][addr - 0xA000]
+				return m.ramBanks[0][addr-0xA000]
 			}
 		}
 	}
@@ -77,10 +99,10 @@ func (m *MBC1) ReadByte(addr uint16) byte {
 }
 
 // WriteByte write given data to addr
-func (m *MBC1) WriteByte(addr uint16, data byte)  {
+func (m *MBC1) WriteByte(addr uint16, data byte) {
 	switch {
 	case addr <= 0x1FFF && m.hasRAM: // enable or disable RAM
-		if data & 0x0F == 0x0A { // TODO - check that I don't need to check the mode
+		if data&0x0F == 0x0A { // TODO - check that I don't need to check the mode
 			// log.Printf("%s: Enabling RAM...\n", m.name)
 			m.ramEnabled = true
 		} else {
@@ -90,11 +112,9 @@ func (m *MBC1) WriteByte(addr uint16, data byte)  {
 
 	case addr >= 0x2000 && addr <= 0x3FFF: // switch ROM bank
 		m.switchROMBank(int(data & 0x1F)) // TODO - check if I need to do any other masking for sizes
-		
 
 	case addr >= 0x4000 && addr <= 0x5FFF: // switch RAM bank
 		m.switchRAMBank(int(data & 0x03))
-		
 
 	case addr >= 0x6000 && addr <= 0x7FFF: // mode select
 		m.mode = data & 0x1
@@ -113,11 +133,16 @@ func (m *MBC1) WriteByte(addr uint16, data byte)  {
 }
 
 // switchROMBank switch active rom bank to val
-func (m *MBC1) switchROMBank(bank int)  {
+func (m *MBC1) switchROMBank(bank int) {
 	m.romBank = bank
 }
 
 // switchRAMBank switch active ram bank to val
-func (m *MBC1) switchRAMBank(bank int)  {
+func (m *MBC1) switchRAMBank(bank int) {
 	m.ramBank = bank
+}
+
+// HasBattery return whether or not MBC supports battery
+func (m *MBC1) HasBattery() bool {
+	return m.hasBattery
 }

@@ -1,5 +1,7 @@
 package cartridge
 
+import "io"
+
 type MBC3 struct {
 	romSize    int      // the rom size
 	romBanks   [][]byte // the rom banks (max 128)
@@ -16,18 +18,38 @@ type MBC3 struct {
 	rtc        *RTC     // the RTC (real time clock) for the cart
 }
 
+// LoadFile implements MemoryBankController.
+func (m *MBC3) LoadFile(file io.Reader) error {
+	if !m.hasBattery {
+		return nil
+	}
+	var err error = nil
+
+	m.ramBanks, err = readRamFromFile(file, len(m.ramBanks), 0x2000)
+	return err
+}
+
+// SaveFile implements MemoryBankController.
+func (m *MBC3) SaveFile(file io.Writer) error {
+	if !m.hasBattery {
+		return nil
+	}
+
+	return writeRAMToFile(m.ramBanks, file)
+}
+
 // NewMBC3 create and return a new MBC3, populating the banks
 func NewMBC3(rom []byte, hasBattery, hasTimer bool, ramSize, romSize int) *MBC3 {
 	mbc := new(MBC3)
 	mbc.hasBattery = hasBattery
 	mbc.hasTimer = hasTimer
 	mbc.romSize, mbc.ramSize = romSize, ramSize
-	
+
 	if ramSize > 0 { // enable ram if supported
 		mbc.hasRam = true
 		mbc.ramEnabled = true
 		mbc.ramBank = 0
-		mbc.ramBanks = createRAMBanks(4) // TODO - check it's always 4
+		mbc.ramBanks = createRAMBanks(4) // TODO - check it's always 4		
 	}
 
 	mbc.romBank = 0
@@ -46,7 +68,7 @@ func (m *MBC3) ReadByte(addr uint16) byte {
 	case addr >= 0x4000 && addr <= 0x7FFF: // switchable rom banks
 		return m.romBanks[m.romBank][addr-0x4000]
 
-	case addr >= 0xA000 && addr <= 0xBFFF: // external Ram/ RTC
+	case addr >= 0xA000 && addr <= 0xC000: // external Ram/ RTC
 		if m.rtcMapped && m.hasTimer {
 			return m.rtc.readByte(addr)
 		}
@@ -78,6 +100,7 @@ func (m *MBC3) WriteByte(addr uint16, data byte) {
 		case addr >= 0x00 && addr <= 0x03: // set RAM Banks
 			if m.hasRam {
 				m.ramBank = data & 0x03
+				m.rtcMapped = false
 			}
 
 		case addr >= 0x08 && addr <= 0x0C: // RTC Map
@@ -102,13 +125,18 @@ func (m *MBC3) WriteByte(addr uint16, data byte) {
 }
 
 // SwitchRAMBank switch ram bank
-func (m *MBC3) switchRAMBank(bank int)  {
-	
+func (m *MBC3) switchRAMBank(bank int) {
+
 }
 
 // SwitchROMBank switch ram bank
-func (m *MBC3) switchROMBank(bank int)  {
-	
+func (m *MBC3) switchROMBank(bank int) {
+
+}
+
+// HasBattery return whether or not MBC supports battery
+func (m *MBC3) HasBattery() bool {
+	return m.hasBattery
 }
 
 type RTC struct {

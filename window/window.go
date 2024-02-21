@@ -20,7 +20,7 @@ type Screen interface {
 	ClearScreen()
 	RenderScreen(screen *ppu.Screen)
 	CloseScreen()
-	GetInput() [8]bool
+	GetInput() (inputs [8]bool, closeEmu bool)
 }
 
 type Context struct {
@@ -104,8 +104,8 @@ func (c *Context) CloseScreen()  {
 // ReceiveInput return the current list of inputs based on their activeness
 // Returns bools based on an index using the joypad constants
 // TODO - implement mapping
-func (c *Context) GetInput() [8]bool {
-	var inputs [8]bool
+func (c *Context) GetInput() (inputs [8]bool, closeEmu bool) {
+	inputs = [8]bool{}
 	sdl.PumpEvents()
 	keys := sdl.GetKeyboardState()
 	inputs[joypad.ButtonA] = keys[sdl.SCANCODE_Z] == 1
@@ -126,5 +126,5 @@ func (c *Context) GetInput() [8]bool {
 		}
 	}
 	
-	return inputs
+	return inputs, keys[sdl.SCANCODE_ESCAPE] == 1
 }

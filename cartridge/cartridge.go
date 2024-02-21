@@ -1,8 +1,10 @@
 package cartridge
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"strings"
 )
 
 // Memory bank type constants - mapped to their equivalent value in rom[0x0147]
@@ -75,6 +77,13 @@ type Cartridge struct {
 	
 }
 
+// SaveTitle get the save title for the game with null terminator removed etc
+func (c *Cartridge) SaveTitle() string {
+	t := bytes.Trim([]byte(c.Title), "\x00") // some titles have a null terminator
+	title := strings.ReplaceAll(string(t), " ", "_")
+	return title + ".save"
+}
+
 // String string representation of cart info
 func (c *Cartridge) String() string {
 	return fmt.Sprintf("Rom name: %s\nRam Size: %v | ROM Size: %v\nMBC Type: %s", c.Title, c.RAMSize, c.ROMSize, c.MBCType)
@@ -102,7 +111,7 @@ func (c *Cartridge) InitCart(rom []byte) error {
 	case 0x00:
 		c.RAMSize = 0
 	case 0x01:
-		c.RAMSize = 2048
+		c.RAMSize = 0
 	case 0x02:
 		c.RAMSize = 8192
 	case 0x03:
@@ -135,9 +144,15 @@ func (c *Cartridge) InitCart(rom []byte) error {
 	// case MBC_2, MBC_2_BATTERY:
 	// 	c.MBC = NewMBC2(rom, c.ROMSize, c.RAMSize)
 	// 	c.MBCType = "MBC2"
-	case MBC_3, MBC_3_RAM_BATTERY:
+	case MBC_3:
+		c.MBC = NewMBC3(rom, false, true, c.RAMSize, c.ROMSize)
+		c.MBCType = "MBC3 (no battery) "
+	case MBC_3_RAM_BATTERY:
 		c.MBC = NewMBC3(rom, true, true, c.RAMSize, c.ROMSize)
-		c.MBCType = "MBC3"
+		c.MBCType = "MBC3 (battery)"
+	case MBC_3_TIMER_BATTERY, MBC_3_TIMER_RAM_BATTERY:
+		c.MBC = NewMBC3(rom, true, true, c.RAMSize, c.ROMSize)
+		c.MBCType = "MBC3 (battery and timer)"
 	case MBC_5, MBC_5_RAM, MBC_5_RUMBLE_RAM:
 		c.MBC = NewMBC5(rom, false, c.RAMSize, c.ROMSize)
 		c.MBCType = "MBC5 (no battery)"

@@ -164,8 +164,8 @@ func (mmu *MMU) ReadByte(addr uint16) byte {
 		return data
 
 	case addr >= 0xA000 && addr <= 0xBFFF: // external ram on cart
-		newAddr := addr - 0xA000
-		data := mmu.Cart.MBC.ReadByte(newAddr)
+		// newAddr := addr - 0xA000
+		data := mmu.Cart.MBC.ReadByte(addr)
 		mmu.addReadToDebug(addr, data, "External Cart RAM")
 		return data
 
@@ -221,8 +221,8 @@ func (mmu *MMU) WriteByte(addr uint16, data byte) {
 		mmu.addWriteToDebug(addr, data, "VRAM")
 
 	case addr >= 0xA000 && addr <= 0xBFFF: // External ram on cart
-		newAddr := addr - 0xA000
-		mmu.Cart.MBC.WriteByte(newAddr, data)
+		// newAddr := addr - 0xA000
+		mmu.Cart.MBC.WriteByte(addr, data)
 		mmu.addWriteToDebug(addr, data, "External Cart RAM")
 
 	case addr >= 0xC000 && addr <= 0xDFFF: // work ram

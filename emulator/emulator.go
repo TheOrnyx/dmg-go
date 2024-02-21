@@ -2,6 +2,7 @@ package emulator
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 var FrameRate float64 = 59.7
 var frameDuration = time.Second / time.Duration(FrameRate)
 
+var SaveDirLoc string = "./Saves" // TODO - replace this with like a different directory
 
 type Emulator struct {
 	CPU *cpu.CPU
@@ -52,6 +54,12 @@ func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 	emu.CPU.ResetDebug()
 	emu.frameStartTime = time.Now()
 	fmt.Println(emu.DebugInfo())
+	if true {
+		err := emu.LoadSaveFile()
+		if err != nil {
+			// return nil, err
+		}
+	}
 	return emu, nil
 }
 
@@ -64,14 +72,17 @@ func (e *Emulator) RequestInterrupt(code byte)  {
 // RunEmulator run the emulator normally
 func (e *Emulator) RunEmulator()  {
 	e.frameStartTime = time.Now()
-	for  {
-		e.Step()
+	running := true
+	for running {
+		running = !e.Step()
 	}
 
 }
 
 // Step step the emulator by one
-func (e *Emulator) Step()  {
+// Returns whether or not emu should close
+func (e *Emulator) Step() bool  {
+	closeEmu := false
 	mCycles := e.CPU.Step()
 	tCycles := mCycles*4
 	e.Timer.TickT(tCycles)
@@ -80,7 +91,8 @@ func (e *Emulator) Step()  {
 
 	if float64(e.CycleCount) >= (cpu.ClockSpeed/ FrameRate) { // finish frame
 		e.CycleCount = 0
-		inputs := e.Renderer.GetInput()
+		inputs, close := e.Renderer.GetInput()
+		closeEmu = close
 		e.Joypad.HandleInput(inputs)
 		e.RenderScreen()
 		e.PPU.Screen.Reset()
@@ -91,6 +103,45 @@ func (e *Emulator) Step()  {
 		
 		// fmt.Printf("time since last frame: %v, sleeptime: %v\n", time.Since(e.frameStartTime), sleepTime)
 		e.frameStartTime = time.Now()
+	}
+
+	return closeEmu
+}
+
+// LoadSaveFile load a save file for a game if exists
+func (e *Emulator) LoadSaveFile() error {
+	saveLoc := fmt.Sprintf("%s/%s", SaveDirLoc, e.MMU.Cart.SaveTitle())
+	if _, err := os.Stat(saveLoc); err != nil {
+		return nil
+	}
+
+	save, err := os.Open(saveLoc)
+	if err != nil {
+		return fmt.Errorf("Failed to open save file: %v", err)
+	}
+	defer save.Close()
+
+	err = e.MMU.Cart.MBC.LoadFile(save)
+	if err != nil {
+		return fmt.Errorf("Failed to load Save file to RAM: %v", err)
+	}
+
+	return nil
+}
+
+// CloseEmulator close the emulator and write saves if needed
+func (e *Emulator) CloseEmulator() {
+	e.Renderer.CloseScreen()
+	os.Mkdir(SaveDirLoc, 0750)
+	file, err := os.Create(fmt.Sprintf("%s/%s", SaveDirLoc, e.CPU.MMU.Cart.SaveTitle()))
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	defer file.Close()
+
+	err = e.MMU.Cart.MBC.SaveFile(file)
+	if err != nil {
+		log.Fatalf("Failed to Save file: %v", err)
 	}
 }
 

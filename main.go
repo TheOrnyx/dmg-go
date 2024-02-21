@@ -40,7 +40,9 @@ func main() {
 		log.Fatal("Error making new emulator:", err)
 	}
 
-	defer emulator.Renderer.CloseScreen()
+	defer emulator.CloseEmulator()
+	
+	// defer emulator.Renderer.CloseScreen()
 
 	if debugMode {
 		debugger.DebugEmu(emulator)

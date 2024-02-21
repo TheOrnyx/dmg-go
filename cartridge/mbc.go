@@ -1,10 +1,18 @@
 package cartridge
 
+import (
+	"encoding/binary"
+	"io"
+)
+
 type MemoryBankController interface {
 	ReadByte(addr uint16) byte
 	WriteByte(addr uint16, data byte)
 	switchRAMBank(bank int)
 	switchROMBank(bank int)
+	HasBattery() bool // return whether or not MBC has battery support
+	SaveFile(file io.Writer) error
+	LoadFile(file io.Reader) error
 }
 
 // createROMBanks create and populate banknum amount of ROM banks from romData and then return
@@ -48,4 +56,28 @@ func createRAMBanks(bankNum int) [][]byte {
 	}
 
 	return ramBanks
+}
+
+// writeRAMToFile write ram array to file
+func writeRAMToFile(ram [][]byte, file io.Writer) error {
+	for bank := range ram {
+		if err := binary.Write(file, binary.LittleEndian, ram[bank]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// readRamFromFile read the ram data from given file and return the byte arrays
+func readRamFromFile(file io.Reader, bankNum, bankSize int) ([][]byte, error) {
+	// reader := bufio.NewReader(file)
+	newBanks := make([][]byte, bankNum)
+	for i := 0; i < bankNum; i++ {
+		bank := make([]byte, bankSize)
+		if err := binary.Read(file, binary.LittleEndian, &bank); err != nil {
+			return nil, err
+		}
+		newBanks[i] = bank
+	}
+	return newBanks, nil
 }

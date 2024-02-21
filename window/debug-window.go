@@ -98,9 +98,10 @@ func (d *DebugWindow) CloseScreen()  {
 
 // ReceiveInput return the current list of inputs based on their activeness
 // Returns bools based on an index using the joypad constants
-func (d *DebugWindow) GetInput() [8]bool {
-	var inputs [8]bool
-	sdl.PollEvent()
+// TODO - implement mapping
+func (d *DebugWindow) GetInput() (inputs [8]bool, closeEmu bool) {
+	inputs = [8]bool{}
+	sdl.PumpEvents()
 	keys := sdl.GetKeyboardState()
 	inputs[joypad.ButtonA] = keys[sdl.SCANCODE_Z] == 1
 	inputs[joypad.ButtonB] = keys[sdl.SCANCODE_X] == 1
@@ -112,5 +113,13 @@ func (d *DebugWindow) GetInput() [8]bool {
 	inputs[joypad.DpadUp] = keys[sdl.SCANCODE_UP] == 1
 	inputs[joypad.DpadDown] = keys[sdl.SCANCODE_DOWN] == 1
 
-	return inputs
+	if keys[sdl.SCANCODE_R] == 1 {
+		if mainPalette == GreenPalette {
+			mainPalette = GrayPalette
+		} else {
+			mainPalette = GreenPalette
+		}
+	}
+	
+	return inputs, keys[sdl.SCANCODE_ESCAPE] == 1
 }
