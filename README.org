@@ -1,14 +1,30 @@
 #+TITLE: DMG-go
 
 * DMG-go
-Hi and welcome to the repo for my (hopefully completed) Gameboy DMG emulator
-written in go. This is a first attempt at systems stuff so it's not the best and
-quite inaccurate but I hope this can serve as a good learning resource or smth
-for other people hoping to attempt the same thing.
+Hi and welcome to the repo for my (still WIP) Gameboy DMG emulator written in
+go. This is a first attempt at systems stuff so it's not the best and quite
+inaccurate but I hope this can serve as a good learning resource or smth for
+other people hoping to attempt the same thing.
 
 NOTE - this was originally supposed to be a Gameboy Color emulator but I decided
 partway through to just focus on doing basic DMG emulation as CGB seemed to
 hard, however you may still find traces of GBC stuff in here
+
+* Execution
+
+
+* Keybinds
+At the moment I don't have custom keybinds done but it's on my list, so these
+are the current keybinds
+
++ Up - Up arrow key
++ Down - Down arrow key
++ Left - Left arrow key
++ Right - Right arrow key
++ A button - Z
++ B button - X
++ Start button - A
++ Select button - S
 
 * Current features and TODO's
 + [X] Functional (albeit inaccurate) CPU
@@ -16,6 +32,9 @@ hard, however you may still find traces of GBC stuff in here
 + [X] Basic saving and loading
 + [ ] Audio
 + [ ] CGB support (probably unlikely)
++ [ ] Custom keybinds
++ [ ] Add more CLI flags
++ [ ] Refactor code a bit
 + [-] MBC support [4/5]
   + [X] MBC0
   + [X] MBC1
@@ -24,9 +43,9 @@ hard, however you may still find traces of GBC stuff in here
   + [X] MBC5
 
 * Resources and credits
-I used a lot of resources and I also +plagiarized+ +borrowed+ referenced some
-already existing gameboy/color emulators for inspiration and to get an idea of
-how they did their stuff.
+I used a lot of resources and I also referenced some already existing
+gameboy/color emulators for inspiration and to get an idea of how they
+structured things and just kinda for help, below I will list some of these.
 
 [[https://github.com/djhworld/gomeboycolor]] - this is another gameboy-color
 emulator written in go that I used as a reference point for a couple of parts of
