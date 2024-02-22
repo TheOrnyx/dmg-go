@@ -16,10 +16,7 @@ import (
 // TODO - add like ticks and stuff
 // TODO - probably kill the operands system and replace it with just loading the values
 
-var infoLog = log.New(os.Stdout, "[INFO] ", log.Ldate)
-var debugLog = log.New(os.Stdout, "[DEBUG] ", log.Ldate)
 var warnLog = log.New(os.Stdout, "[WARN] ", log.LstdFlags)
-var fatalLog = log.New(os.Stdout, "[FaTAL] ", log.LstdFlags)
 
 const ClockSpeed = 4194304 // the CPU clock speed in Hz
 

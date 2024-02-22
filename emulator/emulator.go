@@ -82,7 +82,6 @@ func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 
 // RequestInterrupt request interrupt on CPU (used for PPU)
 func (e *Emulator) RequestInterrupt(code byte) {
-	// fmt.Println("Requesting interrupt:", code)
 	e.CPU.RequestInterrupt(code)
 }
 
