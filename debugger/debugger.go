@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/TheOrnyx/gameboy-golor/emulator"
+	"github.com/TheOrnyx/dmg-go/emulator"
 	"github.com/gdamore/tcell/v2"
 )
 

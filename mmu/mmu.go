@@ -3,10 +3,10 @@ package mmu
 import (
 	"fmt"
 
-	"github.com/TheOrnyx/gameboy-golor/cartridge"
-	"github.com/TheOrnyx/gameboy-golor/joypad"
-	"github.com/TheOrnyx/gameboy-golor/ppu"
-	"github.com/TheOrnyx/gameboy-golor/timer"
+	"github.com/TheOrnyx/dmg-go/cartridge"
+	"github.com/TheOrnyx/dmg-go/joypad"
+	"github.com/TheOrnyx/dmg-go/ppu"
+	"github.com/TheOrnyx/dmg-go/timer"
 )
 
 ///////////////

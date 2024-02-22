@@ -7,13 +7,13 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/TheOrnyx/gameboy-golor/cartridge"
-	"github.com/TheOrnyx/gameboy-golor/cpu"
-	"github.com/TheOrnyx/gameboy-golor/joypad"
-	"github.com/TheOrnyx/gameboy-golor/mmu"
-	"github.com/TheOrnyx/gameboy-golor/ppu"
-	"github.com/TheOrnyx/gameboy-golor/timer"
-	"github.com/TheOrnyx/gameboy-golor/window"
+	"github.com/TheOrnyx/dmg-go/cartridge"
+	"github.com/TheOrnyx/dmg-go/cpu"
+	"github.com/TheOrnyx/dmg-go/joypad"
+	"github.com/TheOrnyx/dmg-go/mmu"
+	"github.com/TheOrnyx/dmg-go/ppu"
+	"github.com/TheOrnyx/dmg-go/timer"
+	"github.com/TheOrnyx/dmg-go/window"
 )
 
 var FrameRate float64 = 59.7

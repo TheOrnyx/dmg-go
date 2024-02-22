@@ -5,11 +5,11 @@ import (
 
 	"flag"
 
-	"github.com/TheOrnyx/gameboy-golor/debugger"
-	_ "github.com/TheOrnyx/gameboy-golor/debugger"
-	emu "github.com/TheOrnyx/gameboy-golor/emulator"
-	"github.com/TheOrnyx/gameboy-golor/window"
-	// "github.com/TheOrnyx/gameboy-golor/window"
+	"github.com/TheOrnyx/dmg-go/debugger"
+	_ "github.com/TheOrnyx/dmg-go/debugger"
+	emu "github.com/TheOrnyx/dmg-go/emulator"
+	"github.com/TheOrnyx/dmg-go/window"
+	// "github.com/TheOrnyx/dmg-go/window"
 )
 
 var debugMode bool = false

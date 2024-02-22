@@ -5,7 +5,7 @@ package ppu
 import (
 	"fmt"
 
-	"github.com/TheOrnyx/gameboy-golor/timer"
+	"github.com/TheOrnyx/dmg-go/timer"
 )
 
 ///////////////

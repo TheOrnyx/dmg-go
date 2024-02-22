@@ -1,4 +1,4 @@
-module github.com/TheOrnyx/gameboy-golor
+module github.com/TheOrnyx/dmg-go
 
 go 1.22
 

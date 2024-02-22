@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/TheOrnyx/gameboy-golor/emulator"
-	"github.com/TheOrnyx/gameboy-golor/window"
+	"github.com/TheOrnyx/dmg-go/emulator"
+	"github.com/TheOrnyx/dmg-go/window"
 )
 
 // TestEmu test the emulator and benchmark it

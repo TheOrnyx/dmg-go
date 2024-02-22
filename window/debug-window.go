@@ -3,8 +3,8 @@ package window
 import (
 	"log"
 
-	"github.com/TheOrnyx/gameboy-golor/joypad"
-	"github.com/TheOrnyx/gameboy-golor/ppu"
+	"github.com/TheOrnyx/dmg-go/joypad"
+	"github.com/TheOrnyx/dmg-go/ppu"
 	"github.com/veandco/go-sdl2/sdl"
 )
 

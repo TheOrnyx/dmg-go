@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/TheOrnyx/gameboy-golor/mmu"
-	"github.com/TheOrnyx/gameboy-golor/timer"
+	"github.com/TheOrnyx/dmg-go/mmu"
+	"github.com/TheOrnyx/dmg-go/timer"
 )
 
 /////////////
