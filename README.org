@@ -10,8 +10,16 @@ NOTE - this was originally supposed to be a Gameboy Color emulator but I decided
 partway through to just focus on doing basic DMG emulation as CGB seemed to
 hard, however you may still find traces of GBC stuff in here
 
-* Execution
+* Screenshots
 
+#+CAPTION: Kirby's dreamland running
+[[./Data/Screenshots/kirby.png]]
+
+#+CAPTION: Pokemon Yellow running
+[[./Data/Screenshots/pokemon_yellow.png]]
+
+#+CAPTION Tetris Running
+[[./Data/Screenshots/tetris.png]]
 
 * Keybinds
 At the moment I don't have custom keybinds done but it's on my list, so these
@@ -25,6 +33,7 @@ are the current keybinds
 + B button - X
 + Start button - A
 + Select button - S
++ Switch between palettes - R (kinda finicky and needs a bit of fixing)
 
 * Current features and TODO's
 + [X] Functional (albeit inaccurate) CPU
