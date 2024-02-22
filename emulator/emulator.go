@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/TheOrnyx/gameboy-golor/cartridge"
@@ -20,6 +21,21 @@ var frameDuration = time.Second / time.Duration(FrameRate)
 
 var SaveDirLoc string = "./Saves" // TODO - replace this with like a different directory
 
+// generateSaveDirLoc create the save directory location using
+// XDG_DATA_HOME or $HOME/.local/share if env doesn't exist
+func generateSaveDirLoc()  {
+	system := runtime.GOOS
+	if system == "linux" {
+		if loc, exists := os.LookupEnv("XDG_DATA_HOME"); exists {
+			SaveDirLoc = fmt.Sprintf("%v/dmg-go", loc)
+		} else {
+			SaveDirLoc = fmt.Sprintf("%v/.local/share/dmg-go", os.Getenv("HOME"))
+		}
+	} else {
+		// TODO - implement things for windows and stuff
+	}
+}
+
 type Emulator struct {
 	CPU            *cpu.CPU
 	MMU            *mmu.MMU
@@ -34,6 +50,7 @@ type Emulator struct {
 // NewEmulator Start a new emulator, load the rom in the given path and return the emulator instance
 func NewEmulator(romPath string, renderer window.Screen) (*Emulator, error) {
 	emu := new(Emulator)
+	generateSaveDirLoc()
 	rom, err := os.ReadFile(romPath)
 	if err != nil {
 		return nil, err
