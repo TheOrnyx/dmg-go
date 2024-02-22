@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"os"
 
 	"flag"
 
@@ -24,8 +26,15 @@ func enableDebug(b string) error {
 }
 
 func main() {
-	flag.BoolFunc("debug", "Activate Debug Mode", enableDebug)
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of dmg-go: %s [flags] [rom path]", os.Args[0])
+
+		flag.PrintDefaults()
+	}
+	
+	flag.BoolFunc("debug", "Use debug mode", enableDebug)
 	flag.Parse()
+	
 	romPath := flag.Args()[0]
 	var win window.Screen
 	
@@ -42,14 +51,9 @@ func main() {
 
 	defer emulator.CloseEmulator()
 	
-	// defer emulator.Renderer.CloseScreen()
-
 	if debugMode {
 		debugger.DebugEmu(emulator)
 	} else {
 		emulator.RunEmulator()
-		// for  {
-		// 	emulator.Step()
-		// }
 	}
 }
