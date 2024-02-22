@@ -106,7 +106,13 @@ func (c *Context) CloseScreen()  {
 // TODO - implement mapping
 func (c *Context) GetInput() (inputs [8]bool, closeEmu bool) {
 	inputs = [8]bool{}
-	sdl.PumpEvents()
+	
+	event := sdl.PollEvent()
+	switch event.(type) {
+	case *sdl.QuitEvent:
+		return inputs, true
+	}
+	
 	keys := sdl.GetKeyboardState()
 	inputs[joypad.ButtonA] = keys[sdl.SCANCODE_Z] == 1
 	inputs[joypad.ButtonB] = keys[sdl.SCANCODE_X] == 1
