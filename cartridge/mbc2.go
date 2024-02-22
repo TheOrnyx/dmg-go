@@ -16,7 +16,6 @@ type MBC2 struct {
 	romBanks    [][]byte  // the other rom banks
 	romBank     byte      // Currently selected ROM bank number
 	hasRAM      bool      // whether or not cart has RAM
-	ramSize     int       // the size of the RAM
 	externalRam [512]byte // the internal RAM on the cart (is represented in half-bytes, so only bottom 4 bytes are used)
 	RamEnabled  bool      // whether or not RAM is enabled
 	hasBattery  bool      // whether or not cart has battery buffered ram
@@ -29,7 +28,7 @@ func (m *MBC2) LoadFile(file io.Reader) error {
 	}
 	var err error = nil
 
-	banks, err := readRamFromFile(file, 1, m.ramSize)
+	banks, err := readRamFromFile(file, 1, 512)
 	m.externalRam = [512]byte(banks[0])
 	return err
 }
@@ -44,16 +43,14 @@ func (m *MBC2) SaveFile(file io.Writer) error {
 }
 
 // NewMBC2 create, map and return a new MBC2
-func NewMBC2(rom []byte, romSize, ramSize int, hasBattery bool) *MBC2 {
+func NewMBC2(rom []byte, romSize int, hasBattery bool) *MBC2 {
 	mbc := new(MBC2)
 	mbc.name = "CART-MBC2"
 	mbc.hasBattery = hasBattery
-	mbc.romSize, mbc.ramSize = romSize, ramSize
+	mbc.romSize = romSize
 
-	if ramSize > 0 {
-		mbc.hasRAM = true
-		mbc.RamEnabled = true
-	}
+	mbc.hasRAM = true
+	mbc.RamEnabled = true
 
 	mbc.romBank0 = rom[0x0000:0x4000]
 	mbc.romBanks = createROMBanks(rom, romSize/0x4000)

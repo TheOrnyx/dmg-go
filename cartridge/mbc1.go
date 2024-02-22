@@ -95,7 +95,7 @@ func (m *MBC1) ReadByte(addr uint16) byte {
 		}
 	}
 
-	return 0xFF // NOTE - I think it's meant to be 0xFF? either that or 0x00
+	return 0xFF
 }
 
 // WriteByte write given data to addr

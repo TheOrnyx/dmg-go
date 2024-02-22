@@ -141,9 +141,12 @@ func (c *Cartridge) InitCart(rom []byte) error {
 	case MBC_1_RAM_BATTERY:
 		c.MBC = NewMBC1(rom, c.ROMSize, c.RAMSize, true)
 		c.MBCType = "MBC1 battery"
-	// case MBC_2, MBC_2_BATTERY:
-	// 	c.MBC = NewMBC2(rom, c.ROMSize, c.RAMSize)
-	// 	c.MBCType = "MBC2"
+	case MBC_2:
+		c.MBC = NewMBC2(rom, c.ROMSize, false)
+		c.MBCType = "MBC2"
+	case MBC_2_BATTERY:
+		c.MBC = NewMBC2(rom, c.ROMSize, true)
+		c.MBCType = "MBC2 (Battery)"
 	case MBC_3:
 		c.MBC = NewMBC3(rom, false, true, c.RAMSize, c.ROMSize)
 		c.MBCType = "MBC3 (no battery) "
