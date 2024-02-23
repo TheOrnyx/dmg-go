@@ -13,13 +13,13 @@ hard, however you may still find traces of GBC stuff in here
 * Screenshots
 
 #+CAPTION: Kirby's dreamland running
-[[./Data/Screenshots/kirby.png]]
+[[./Screenshots/kirby.png]]
 
 #+CAPTION: Pokemon Yellow running
-[[./Data/Screenshots/pokemon_yellow.png]]
+[[./Screenshots/pokemon_yellow.png]]
 
-#+CAPTION Tetris Running
-[[./Data/Screenshots/tetris.png]]
+#+CAPTION: Tetris Running
+[[./Screenshots/tetris.png]]
 
 * Keybinds
 At the moment I don't have custom keybinds done but it's on my list, so these
